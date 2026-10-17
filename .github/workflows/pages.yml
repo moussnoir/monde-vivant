@@ -3,6 +3,10 @@ name: Déployer sur GitHub Pages
 on:
   push:
     branches: [main]
+  # les plans OSM sont commités par le workflow nocturne : on republie quand il a fini
+  workflow_run:
+    workflows: ["Générer des plans OpenStreetMap"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
