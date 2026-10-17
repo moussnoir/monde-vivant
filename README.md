@@ -31,9 +31,18 @@ La sauvegarde est stockée dans le navigateur (`localStorage`).
 
 ## Plans OpenStreetMap
 
+### Sources de données (contre la saturation d’Overpass)
+
+Les données viennent toujours d’OpenStreetMap, par deux chemins :
+
+1. **Tuiles vectorielles OpenFreeMap** (`lib/vt-source.mjs`, décodées avec `vendor/vt.mjs`) : servies par un CDN, sans clé ni limite de débit, rapides. Source utilisée en premier dans le navigateur.
+2. **Overpass** : plus détaillé (types de bâtiments, étages, noms, commerces), mais les serveurs publics saturent souvent. Source utilisée en premier par le générateur nocturne, avec les tuiles en secours ; dans le navigateur, en secours des tuiles (miroirs compatibles seulement, 40 s max).
+
+Les plans pré-générés dans le dépôt (chaque nuit) et le cache de l’appareil évitent de redemander une ville déjà vue.
+
 Le jeu cherche d’abord `models/osm/<clé>.json` (clé = nom de ville normalisé + code pays, ex. `porto_novo_bj`). S’il n’existe pas :
 
-- par défaut, le navigateur du joueur génère le plan lui-même depuis Overpass (30 à 90 s la première fois), puis le garde en cache sur l’appareil : toutes les villes ont leur plan réel, sans serveur ;
+- par défaut, le navigateur du joueur génère le plan lui-même, puis le garde en cache sur l’appareil : toutes les villes ont leur plan réel, sans serveur ;
 - avec `osmServer` renseigné dans `config.js`, il le demande plutôt au serveur ;
 - en cas d’échec (Overpass saturé, hors ligne), il construit le quartier procédural habituel.
 
