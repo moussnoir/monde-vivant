@@ -1,0 +1,53 @@
+name: Générer des plans OpenStreetMap
+
+# Lancement manuel : Actions > « Générer des plans OpenStreetMap » > Run workflow
+on:
+  workflow_dispatch:
+    inputs:
+      cities:
+        description: 'Villes « Nom:ISO » séparées par des espaces (ex. Porto-Novo:BJ Parakou:BJ)'
+        required: false
+        default: ''
+      country:
+        description: 'Ou toutes les villes d’un pays (code ISO, ex. BJ)'
+        required: false
+        default: ''
+      top:
+        description: 'Ou les N plus grandes villes pas encore générées'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Générer
+        env:
+          CITIES: ${{ github.event.inputs.cities }}
+          COUNTRY: ${{ github.event.inputs.country }}
+          TOP: ${{ github.event.inputs.top }}
+        run: |
+          set -f
+          ARGS=()
+          for c in $CITIES; do ARGS+=("$c"); done
+          [ -n "$COUNTRY" ] && ARGS+=(--country "$COUNTRY")
+          [ -n "$TOP" ] && ARGS+=(--top "$TOP")
+          node tools/osm-build.mjs "${ARGS[@]}"
+      - name: Committer les nouveaux plans
+        env:
+          LABEL: ${{ github.event.inputs.cities }}${{ github.event.inputs.country }}${{ github.event.inputs.top }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add models/osm
+          git diff --cached --quiet && echo "Aucun nouveau plan" && exit 0
+          git commit -m "Plans OSM : $LABEL"
+          git push

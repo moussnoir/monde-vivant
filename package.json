@@ -1,0 +1,13 @@
+{
+  "name": "monde-vivant",
+  "version": "0.17.0",
+  "private": true,
+  "description": "Monde Vivant — jeu 3D de vie quotidienne dans des villes réelles (three.js, OpenStreetMap)",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server/server.mjs",
+    "serve": "npx --yes http-server -p 8080 -c-1 .",
+    "osm": "node tools/osm-build.mjs"
+  }
+}

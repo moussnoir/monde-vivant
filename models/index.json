@@ -1,0 +1,221 @@
+{
+ "c_flambi": {
+  "cat": "creature",
+  "h": 0.6,
+  "kb": 1530,
+  "ry": -0.5
+ },
+ "c_gouttou": {
+  "cat": "creature",
+  "h": 0.55,
+  "kb": 1265,
+  "ry": 1.0
+ },
+ "c_pousseton": {
+  "cat": "creature",
+  "h": 0.55,
+  "kb": 1385
+ },
+ "c_zemzou": {
+  "cat": "creature",
+  "h": 0.5,
+  "kb": 1903
+ },
+ "c_kpakpato": {
+  "cat": "creature",
+  "h": 1.5,
+  "kb": 2833
+ },
+ "c_gargouille": {
+  "cat": "creature",
+  "h": 1.4,
+  "kb": 1578
+ },
+ "c_lampinou": {
+  "cat": "creature",
+  "h": 0.55,
+  "kb": 1392
+ },
+ "c_renardin": {
+  "cat": "creature",
+  "h": 0.5,
+  "kb": 1562,
+  "ry": 1.1
+ },
+ "f_sofa": {
+  "cat": "furniture",
+  "h": 0.95,
+  "kb": 1357
+ },
+ "f_bed": {
+  "cat": "furniture",
+  "h": 1.0,
+  "kb": 1620
+ },
+ "f_wardrobe": {
+  "cat": "furniture",
+  "h": 2.0,
+  "kb": 869
+ },
+ "f_fridge": {
+  "cat": "furniture",
+  "h": 1.75,
+  "kb": 898
+ },
+ "f_stove": {
+  "cat": "furniture",
+  "h": 0.9,
+  "kb": 1297
+ },
+ "f_table": {
+  "cat": "furniture",
+  "h": 0.95,
+  "kb": 1067
+ },
+ "f_shelf": {
+  "cat": "furniture",
+  "h": 1.9,
+  "kb": 1592
+ },
+ "v_zem": {
+  "cat": "vehicle",
+  "h": 1.15,
+  "kb": 2608,
+  "ry": 1.5708
+ },
+ "lm_amazone": {
+  "cat": "monument",
+  "h": 25.0,
+  "kb": 4757
+ },
+ "lm_etoile": {
+  "cat": "monument",
+  "h": 26.0,
+  "kb": 3019
+ },
+ "lm_cathedrale": {
+  "cat": "monument",
+  "h": 38.0,
+  "kb": 5473
+ },
+ "lm_eiffel": {
+  "cat": "monument",
+  "h": 210.0,
+  "kb": 7838
+ },
+ "lm_arc": {
+  "cat": "monument",
+  "h": 49.0,
+  "kb": 5715
+ },
+ "lm_esb": {
+  "cat": "monument",
+  "h": 340.0,
+  "kb": 3764
+ },
+ "lm_liberty": {
+  "cat": "monument",
+  "h": 58.0,
+  "kb": 3639
+ },
+ "lm_tokyotower": {
+  "cat": "monument",
+  "h": 222.0,
+  "kb": 6681
+ },
+ "lm_kaminarimon": {
+  "cat": "monument",
+  "h": 11.0,
+  "kb": 4422
+ },
+ "lm_pagode": {
+  "cat": "monument",
+  "h": 34.0,
+  "kb": 6145
+ },
+ "lm_hondo": {
+  "cat": "monument",
+  "h": 13.0,
+  "kb": 5952
+ },
+ "v_car": {
+  "cat": "vehicle",
+  "h": 1.45,
+  "kb": 1048
+ },
+ "lm_bigben": {
+  "cat": "monument",
+  "h": 96.0,
+  "kb": 9036
+ },
+ "lm_colisee": {
+  "cat": "monument",
+  "h": 48.0,
+  "kb": 6565
+ },
+ "lm_pyramide": {
+  "cat": "monument",
+  "h": 139.0,
+  "kb": 3674
+ },
+ "lm_burj": {
+  "cat": "monument",
+  "h": 828.0,
+  "kb": 2466
+ },
+ "lm_christ": {
+  "cat": "monument",
+  "h": 38.0,
+  "kb": 3478
+ },
+ "lm_basile": {
+  "cat": "monument",
+  "h": 47.0,
+  "kb": 6204
+ },
+ "lm_templeciel": {
+  "cat": "monument",
+  "h": 38.0,
+  "kb": 7791
+ },
+ "lm_opera": {
+  "cat": "monument",
+  "h": 65.0,
+  "kb": 3540
+ },
+ "lm_theatre": {
+  "cat": "monument",
+  "h": 31.0,
+  "kb": 4156
+ },
+ "lm_mosquee": {
+  "cat": "monument",
+  "h": 70.0,
+  "kb": 3905
+ },
+ "lm_gateway": {
+  "cat": "monument",
+  "h": 26.0,
+  "kb": 4875
+ },
+ "lm_sophie": {
+  "cat": "monument",
+  "h": 55.0,
+  "kb": 4743
+ },
+ "lm_parthenon": {
+  "cat": "monument",
+  "h": 14.0,
+  "kb": 4632
+ },
+ "lm_brandebourg": {
+  "cat": "monument",
+  "h": 26.0,
+  "kb": 3821
+ },
+ "lm_renaissance": {
+  "cat": "monument",
+  "h": 52.0,
+  "kb": 4133
+ }
+}

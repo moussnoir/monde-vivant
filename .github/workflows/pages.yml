@@ -1,0 +1,40 @@
+name: Déployer sur GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparer le site (sans le serveur ni les outils)
+        env:
+          OSM_SERVER_URL: ${{ vars.OSM_SERVER_URL }}
+        run: |
+          mkdir _site
+          cp -r index.html config.js .nojekyll art models vendor _site/
+          # URL du serveur OSM définie dans Settings > Secrets and variables > Actions > Variables
+          if [ -n "$OSM_SERVER_URL" ]; then
+            node -e "const f='_site/config.js',fs=require('fs');fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(\"osmServer: ''\",'osmServer: '+JSON.stringify(process.env.OSM_SERVER_URL)))"
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
