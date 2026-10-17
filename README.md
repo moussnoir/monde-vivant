@@ -2,7 +2,7 @@
 
 Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotonou, Paris, New York, Tokyo et plus de 7 200 villes du monde. Three.js (r128), sans build : un seul `index.html` et des ressources statiques.
 
-- `index.html` : le jeu (v0.18 : commerces réels, centres commerciaux, carte zoomable)
+- `index.html` : le jeu (v0.21 : vraie ville jusqu’au centre et architecture régionale)
 - `config.js` : configuration de déploiement (URL du serveur de cartes)
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
@@ -35,6 +35,12 @@ Le jeu cherche d’abord `models/osm/<clé>.json` (clé = nom de ville normalis�
 - par défaut, le navigateur du joueur génère le plan lui-même depuis Overpass (30 à 90 s la première fois), puis le garde en cache sur l’appareil : toutes les villes ont leur plan réel, sans serveur ;
 - avec `osmServer` renseigné dans `config.js`, il le demande plutôt au serveur ;
 - en cas d’échec (Overpass saturé, hors ligne), il construit le quartier procédural habituel.
+
+Dans les villes du monde, le cœur du quartier est le vrai plan : les habitants marchent dans les vraies rues (graphe des voies OSM), les voitures y circulent, le marché s’installe sur une vraie place proche du centre et les logements et boutiques sont de vrais bâtiments. Seules les quatre villes détaillées (Cotonou, Paris, New York, Tokyo) gardent leur quartier dessiné à la main et leurs monuments.
+
+L’architecture suit la région (profils `ARCH` dans `index.html`, une trentaine d’aires culturelles) : motifs de façade (haussmannien, méditerranéen à volets, colonial à balcons, brique à fenêtres à guillotine, barres en panneaux préfabriqués, moucharabiehs, compartiments asiatiques, bardage bois…), couleur propre à chaque bâtiment, toits en pente (tuiles, ardoises, tôle) ou terrasses (acrotères, réservoirs d’eau, paraboles, chauffe-eau solaires, fers à béton en attente), hauteurs par défaut, trottoirs, marquages au sol, lampadaires, arbres des parcs, sol entre les bâtiments et enseignes des vrais commerces dans la typographie et l’écriture du pays. Les balises OSM `building:colour`, `roof:colour`, `roof:shape` et `building:material` sont utilisées quand elles existent.
+
+Un plan pré-généré trop pauvre près du centre (moins de 60 bâtiments à 300 m, cas de plusieurs anciens fichiers de `models/osm/`) est régénéré au premier passage (navigateur ou serveur) puis gardé en cache ; en cas d’échec, le jeu garde le fichier et le quartier généré, aux couleurs de la région.
 
 Le monde est ouvert : au-delà du plan de départ, la ville réelle se charge par tuiles de 600 m autour du joueur (OpenStreetMap, gardées en cache), sur un sol sans limite. Les bâtiments non rectangulaires (L, U, cours, tours rondes) sont extrudés d’après leur contour réel ; la façade dépend de l’usage (bureaux et tours en verre, industrie en brique, sinon le style de la région) et les commerces ont une enseigne lumineuse.
 
