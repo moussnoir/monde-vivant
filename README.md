@@ -8,7 +8,8 @@ Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotono
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
 - `models/osm/` : plans OpenStreetMap pré-générés (~70 villes) + `index.json`
 - `vendor/three/` : three.js r128 et ses modules, servis en local (plus de dépendance aux CDN)
-- `server/` : serveur de cartes OpenStreetMap à la demande
+- `lib/osm-lib.mjs` : conversion OpenStreetMap → plan du jeu, partagée par le jeu, le script et le serveur
+- `server/` : serveur de cartes OpenStreetMap à la demande (optionnel)
 - `tools/osm-build.mjs` : génération de plans en ligne de commande
 
 ## Jouer en local
@@ -31,8 +32,11 @@ La sauvegarde est stockée dans le navigateur (`localStorage`).
 
 Le jeu cherche d’abord `models/osm/<clé>.json` (clé = nom de ville normalisé + code pays, ex. `porto_novo_bj`). S’il n’existe pas :
 
-- avec `osmServer` renseigné dans `config.js`, il demande le plan au serveur, qui le génère depuis Overpass (30 à 90 s la première fois, puis en cache) ;
-- sinon, ou en cas d’échec, il construit le quartier procédural habituel.
+- par défaut, le navigateur du joueur génère le plan lui-même depuis Overpass (30 à 90 s la première fois), puis le garde en cache sur l’appareil : toutes les villes ont leur plan réel, sans serveur ;
+- avec `osmServer` renseigné dans `config.js`, il le demande plutôt au serveur ;
+- en cas d’échec (Overpass saturé, hors ligne), il construit le quartier procédural habituel.
+
+Les bâtiments non rectangulaires (L, U, cours, tours rondes) sont extrudés d’après leur contour réel ; la façade dépend de l’usage (bureaux et tours en verre, industrie en brique, sinon le style de la région) et les commerces ont une enseigne lumineuse.
 
 Chaque nuit, le workflow « Générer des plans OpenStreetMap » complète le dépôt : la première nuit il met à jour les plans existants (ajout des commerces, centres commerciaux et noms de bâtiments, plus Tokyo), ensuite il ajoute les 400 plus grandes villes manquantes à chaque passage, dans la limite de 700 Mo.
 

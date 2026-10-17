@@ -393,7 +393,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.18 · Villes réelles, commerces et carte zoomable</div>
+    <div class="eyebrow">Version 0.19 · Toutes les villes du monde en plan réel</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -1043,14 +1043,16 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];
     // bâtiments
     const pal={cotonou:[['afr',0],['afr2',0]],paris:[['paris',0]],newyork:[['ny',0],['brick',0],['glass',0]],tokyo:[['tokyo',0],['glass',0]]}[base]||[['afr',0]];
     let n=0;
-    for(const [cx,cz,w,d,a,h0,kind,fill,colr,bn] of O.b){if(inQ(cx,cz)||wet(cx,cz)||lmNear(cx,cz,8))continue;
+    for(const [cx,cz,w,d,a,h0,kind,fill,colr,bn,shp] of O.b){if(inQ(cx,cz)||wet(cx,cz)||lmNear(cx,cz,8))continue;
       const r=hh(cx,cz);let h=h0;
       if(!h){h=base==='cotonou'?(kind===2||kind===3?7+r*9:kind===7?2.6:3.3+(r<0.35?3.1:0)+(r<0.08?3.1:0)):base==='paris'?15+r*8:base==='newyork'?12+r*r*60:9+r*24}
       h=Math.max(2.6,Math.min(h,320));
       const small=kind===7||(base==='cotonou'&&h<4.5&&w*d<120);
       if(small){const c=colr||pick(['#e8dcc4','#d9cbb0','#cfd8d4','#efe6c8','#e6d2c0']);wall.add(cx,0,cz,w,h,d,c,0,-a,0);roof.add(cx,h,cz,w+0.5,0.08,d+0.5,pick(['#9aa0a6','#8a6a4a','#a65a3a']),0,-a,0)}
-      else{const key=pal[Math.floor(r*pal.length)][0];const g=facadeBox(0,0,0,w,h,d,key==='glass'?2.4:3.2,3.1);g.rotateY(-a);g.translate(cx,0,cz);(facGeo[key]=facGeo[key]||[]).push(g);
-        if(base==='cotonou')conc.add(cx,h,cz,w+0.1,0.6,d+0.1,'#d9d2c4',0,-a,0)}
+      else{const key=osmStyle(kind,h,base,r,pal,colr),cw=key==='glass'?2.4:3.2;
+        if(shp&&shp.length>=5){(facGeo[key]=facGeo[key]||[]).push(facadePoly(shp.map(p=>[cx+p[0],cz+p[1]]),0,h,cw,3.1))}
+        else{const g=facadeBox(0,0,0,w,h,d,cw,3.1);g.rotateY(-a);g.translate(cx,0,cz);(facGeo[key]=facGeo[key]||[]).push(g);
+          if(base==='cotonou')conc.add(cx,h,cz,w+0.1,0.6,d+0.1,'#d9d2c4',0,-a,0)}}
       // collisions : petits carrés le long du grand côté
       const Lg=Math.max(w,d),S=Math.min(w,d),ux=Math.cos(a)*(w>=d?1:0)-Math.sin(a)*(w>=d?0:1),uz=Math.sin(a)*(w>=d?1:0)+Math.cos(a)*(w>=d?0:1),k=Math.max(1,Math.ceil(Lg/S));
       for(let i=0;i<k;i++){const t=-Lg/2+S/2+(Lg-S)*(k>1?i/(k-1):0.5),px=cx+ux*t,pz=cz+uz*t,e=S*0.5*(Math.abs(Math.cos(a))+Math.abs(Math.sin(a)))*0.86;addCol(px-e,pz-e,px+e,pz+e)}
@@ -1063,7 +1065,11 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];
           const per=Math.max(1,Math.min(16,Math.round(area*0.72/72))),street=bestF.ni>=0&&O.n[bestF.ni]?O.n[bestF.ni]:'',num=1+Math.floor(r*120);
           OSMDOORS.push({x:fx+nx*1.5,z:fz+nz*1.5,cx,cz,nx,nz,floors,per,kind,small,res,shopG,bname:bn||'',seed:Math.floor(r*1e9)+n,addr:(street?num+' '+street:'Bâtiment n° '+(n+1))})}}
       n++}
-    osmGrid();osmAttachPOI(O);console.log('OSM',O.city,n,'bâtiments',OSMDOORS.length,'portes',OSMPOI.length,'lieux');
+    osmGrid();osmAttachPOI(O);
+    // enseignes lumineuses au-dessus des portes des commerces et centres commerciaux
+    for(const dd of OSMDOORS){const P=dd.poi,com=P?!!poiInfo(P.t).k:dd.kind===3;if(!com)continue;const ry=Math.atan2(dd.nx,dd.nz),fx=dd.x-dd.nx*1.5,fz=dd.z-dd.nz*1.5,mall=P&&P.t==='mall',col=P?poiInfo(P.t).c:'#e0803a';
+      glow.add(fx+dd.nx*0.2,mall?5.2:2.75,fz+dd.nz*0.2,mall?7:2.6,mall?1.3:0.55,0.12,col,0,ry,0);
+      if(!mall)metal.add(fx+dd.nx*0.6,2.45,fz+dd.nz*0.6,3,0.08,1.1,col,0,ry,0)}console.log('OSM',O.city,n,'bâtiments',OSMDOORS.length,'portes',OSMPOI.length,'lieux');
   }
   /* ---------- Cotonou : concessions ---------- */
   function cotonouLayout(){
@@ -1640,6 +1646,24 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];
       if(E.boat!=='ferry') movingBoat(E.boat,width*0.7,-2.3,-2.0,140);
     }
   }
+  // façade extrudée d'après le contour réel du bâtiment (OSM) : murs texturés étage par étage + toit plat
+  function facadePoly(pts,y0,h,cellW,cellH){const n=pts.length,P=[],N=[],U=[],y1=y0+h;let a2=0;
+    for(let i=0;i<n;i++){const [x0,z0]=pts[i],[x1,z1]=pts[(i+1)%n];a2+=x0*z1-x1*z0}
+    let run=0;
+    for(let i=0;i<n;i++){const [x0,z0]=pts[i],[x1,z1]=pts[(i+1)%n],dx=x1-x0,dz=z1-z0,L=Math.hypot(dx,dz);if(L<0.05)continue;
+      let nx=-dz/L,nz=dx/L;const flip=a2>0;if(flip){nx=-nx;nz=-nz}
+      const u0=run/cellW/8,u1=(run+L)/cellW/8,v1=h/cellH/8;run+=L;
+      const A=[x0,y0,z0,u0,0],B=[x1,y0,z1,u1,0],C=[x1,y1,z1,u1,v1],D=[x0,y1,z0,u0,v1];
+      const tris=flip?[A,C,B,A,D,C]:[A,B,C,A,C,D];
+      for(const v of tris){P.push(v[0],v[1],v[2]);N.push(nx,0,nz);U.push(v[3],v[4])}}
+    const ix=THREE.ShapeUtils.triangulateShape(pts.map(p=>new THREE.Vector2(p[0],p[1])),[]);
+    for(const [i0,i1,i2] of ix){let a=pts[i0],b=pts[i1],c=pts[i2];if((b[1]-a[1])*(c[0]-a[0])-(b[0]-a[0])*(c[1]-a[1])<0){const t=b;b=c;c=t}
+      for(const v of [a,b,c]){P.push(v[0],y1,v[1]);N.push(0,1,0);U.push(0.004,0.996)}}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));return g}
+  // style de façade selon l'usage réel : bureaux et tours en verre, industrie en brique, sinon le style de la région
+  function osmStyle(kind,h,base,r,pal,colr){if(kind===4||h>(base==='cotonou'?30:48))return 'glass';if(kind===5&&base!=='cotonou')return 'brick';
+    if(colr&&base!=='cotonou'){const c=String(colr).toLowerCase();if(/brick|red|brown|#8|#9|#a0|#b0/.test(c))return 'brick';if(/glass|blue|#9fc|#acd/.test(c))return 'glass'}
+    return pal[Math.floor(r*pal.length)][0]}
   function facadeBox(x,y,z,w,h,d,cellW,cellH){
     const g=new THREE.BoxGeometry(w,h,d); g.translate(0,h/2,0);
     const uv=g.attributes.uv, dims=[[d,h],[d,h],[0,0],[0,0],[w,h],[w,h]];
@@ -2523,7 +2547,7 @@ function paintBase(g,X,Z,k,W,H,fs,opt){
     g.lineCap='round';g.lineJoin='round';
     for(const [cls,wd,ni,surf,pts] of O.r){if(cls>=6&&k<1.2)continue;g.strokeStyle=cls>=6?M.street+'99':cls<=2?M.avenue:M.street;g.lineWidth=Math.max(cls>=6?0.8:1.5,wd*k);g.beginPath();let on=false;
       for(const p of pts){if(inQ(p[0],p[1])){on=false;continue}if(!on){g.moveTo(X(p[0]),Z(p[1]));on=true}else g.lineTo(X(p[0]),Z(p[1]))}g.stroke()}
-    g.fillStyle=M.build;for(const [cx,cz,w,d,a,h0,kind] of O.b){if(inQ(cx,cz)||!vis(cx,cz,Math.max(w,d)*k))continue;g.save();g.translate(X(cx),Z(cz));g.rotate(a);g.fillRect(-w*k/2,-d*k/2,w*k,d*k);g.restore()}
+    g.fillStyle=M.build;for(const [cx,cz,w,d,a,h0,kind,f1,c1,n1,shp] of O.b){if(inQ(cx,cz)||!vis(cx,cz,Math.max(w,d)*k))continue;if(shp&&shp.length>=5&&k>0.5){g.beginPath();shp.forEach((p,i)=>i?g.lineTo(X(cx+p[0]),Z(cz+p[1])):g.moveTo(X(cx+p[0]),Z(cz+p[1])));g.closePath();g.fill();continue}g.save();g.translate(X(cx),Z(cz));g.rotate(a);g.fillRect(-w*k/2,-d*k/2,w*k,d*k);g.restore()}
     // bâtiments commerciaux et nommés, plus visibles
     g.fillStyle=M.build;g.globalAlpha=1;for(const [cx,cz,w,d,a,h0,kind,f2,c2,bn] of O.b){if(kind!==3||inQ(cx,cz)||!vis(cx,cz,Math.max(w,d)*k))continue;g.save();g.translate(X(cx),Z(cz));g.rotate(a);g.fillStyle='rgba(224,128,58,.55)';g.fillRect(-w*k/2,-d*k/2,w*k,d*k);g.restore()}
     g.font='bold '+Math.round(15*fs)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#fff';g.strokeStyle='rgba(0,0,0,.55)';g.lineWidth=4*fs;const seen={};
@@ -5243,14 +5267,26 @@ window.__spots=()=>lmSpots();window.__reg=()=>REGION;
 /* ================= Données OpenStreetMap des villes ================= */
 let OSMD=null,OSM_IDX=null;const OSMC={};
 const osmKey=R=>R.world?wNorm(R.city).replace(/[^a-z0-9]+/g,'_')+'_'+R.iso.toLowerCase():R.id;
+// cache local des plans générés dans le navigateur (IndexedDB) : une ville générée une fois se recharge instantanément
+const osmIDB=(()=>{let P=null;const db=()=>P||(P=new Promise((ok,ko)=>{try{const q=indexedDB.open('mv-osm',1);q.onupgradeneeded=()=>q.result.createObjectStore('plans');q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error)}catch(e){ko(e)}}));
+  const tx=(m,f)=>db().then(d=>new Promise((ok,ko)=>{const t=d.transaction('plans',m),r=f(t.objectStore('plans'));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>ko(t.error)}));
+  return {get:k=>tx('readonly',s=>s.get(k)).catch(()=>null),set:(k,v)=>tx('readwrite',s=>s.put(v,k)).catch(()=>null)}})();
+const OSM_FMT=2;
 async function osmEnsure(R){OSMD=null;try{
   if(!OSM_IDX)OSM_IDX=await fetch('models/osm/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
-  const k=osmKey(R),SRV=((window.MV_CONFIG||{}).osmServer||'').replace(/\/+$/,'');if(!OSM_IDX[k]&&!SRV)return;
+  const C=window.MV_CONFIG||{},k=osmKey(R),SRV=(C.osmServer||'').replace(/\/+$/,''),live=C.osmBrowser!==false;
+  if(!OSM_IDX[k]&&!SRV&&!live)return;
   if(!OSMC[k]){$('#loading-txt').textContent='Chargement du plan réel de '+R.city+' (OpenStreetMap)…';
     if(OSM_IDX[k])OSMC[k]=await fetch('models/osm/'+k+'.json?v='+OSM_IDX[k]).then(r=>r.json());
-    else{$('#loading-txt').textContent='Génération du plan réel de '+R.city+' (OpenStreetMap)… jusqu’à une minute la première fois';
-      const ac=new AbortController(),to=setTimeout(()=>ac.abort(),(window.MV_CONFIG||{}).osmTimeout||90000);
-      try{const r=await fetch(SRV+'/osm/'+k+'.json?lat='+R.lat+'&lon='+R.lon,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);OSMC[k]=await r.json()}finally{clearTimeout(to)}}}
+    else{const hit=await osmIDB.get(k);
+      if(hit&&hit.fmt===OSM_FMT)OSMC[k]=hit.data;
+      else{$('#loading-txt').textContent='Génération du plan réel de '+R.city+' (OpenStreetMap)… jusqu’à une minute la première fois';
+        const ac=new AbortController(),to=setTimeout(()=>ac.abort(),C.osmTimeout||90000);
+        try{if(SRV){const r=await fetch(SRV+'/osm/'+k+'.json?lat='+R.lat+'&lon='+R.lon,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);OSMC[k]=await r.json()}
+          else{const L=await import(new URL('lib/osm-lib.mjs',location.href).href);
+            const d=await L.buildCity({key:k,lat:R.lat,lon:R.lon,R:700,signal:ac.signal,log:m=>console.log('OSM',m)});
+            if(d.b.length+d.r.length<20)throw new Error('trop peu de données OSM');OSMC[k]=d}
+          osmIDB.set(k,{fmt:OSM_FMT,t:Date.now(),data:OSMC[k]})}finally{clearTimeout(to)}}}}
   OSMD=OSMC[k]}catch(e){console.warn('OSM indisponible',e);OSMD=null}}
 
 /* ================= Bâtiments réels : maisons, immeubles, appartements, boutiques ================= */
