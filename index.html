@@ -393,7 +393,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.23 · Passants et circulation dans toute la ville</div>
+    <div class="eyebrow">Version 0.24 · Toute la Terre : relief, monuments et architecture de chaque pays</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -567,7 +567,7 @@ renderer.xr.enabled=true;
 $('#scene').appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 const FOG=new THREE.FogExp2(0xbfd2dc,0.0065); scene.fog=FOG;
-const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.08,900);
+const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,0.08,5000);
 const dolly=new THREE.Group(); dolly.add(camera); camera.position.y=1.65; scene.add(dolly);
 const L=h=>new THREE.Color(h).convertSRGBToLinear();
 const hemi=new THREE.HemisphereLight(0xdfeeff,0x9a5a38,0.35); scene.add(hemi);
@@ -673,7 +673,14 @@ function facadeTex(style){
     brick:{wall:'#7e4636',win:'#20262c',frame:'#e8e2d6',ww:0.44,wh:0.56},
     tokyo:{wall:'#e1ddd5',win:'#27313a',frame:'#a9a49b',ww:0.66,wh:0.5,rail:true},
     glass:{wall:'#3d4f5e',win:'#22313e',frame:'#55646f',ww:0.94,wh:0.84},
-    afr:{wall:'#e2d5bd',win:'#2a2f33',frame:'#6b5644',ww:0.36,wh:0.48,rail:true},afr2:{wall:'#cfd9d3',win:'#283035',frame:'#f0ece4',ww:0.4,wh:0.5,rail:true}}[style];
+    afr:{wall:'#e2d5bd',win:'#2a2f33',frame:'#6b5644',ww:0.36,wh:0.48,rail:true},afr2:{wall:'#cfd9d3',win:'#283035',frame:'#f0ece4',ww:0.4,wh:0.5,rail:true},
+    // architectures régionales
+    arab:{wall:'#d9c29a',win:'#2b2621',frame:'#c4a77a',ww:0.3,wh:0.52,arch:true,mash:true},arab2:{wall:'#ece3d0',win:'#2e2a26',frame:'#b99a6a',ww:0.32,wh:0.5,arch:true},
+    medit:{wall:'#efe6d2',win:'#2c3238',frame:'#f6f1e6',ww:0.38,wh:0.62,shut:'#2e6e8e',rail:true},medit2:{wall:'#e8c9a0',win:'#2c3238',frame:'#f3ead8',ww:0.38,wh:0.62,shut:'#5a7a3a'},
+    latin:{wall:'#e8b86b',win:'#2a2f33',frame:'#f6efe0',ww:0.4,wh:0.58,rail:true},latin2:{wall:'#7fb3c8',win:'#263038',frame:'#f6efe0',ww:0.4,wh:0.58,shut:'#3a5a7a'},latin3:{wall:'#d97b6c',win:'#2a2f33',frame:'#f6efe0',ww:0.4,wh:0.58,rail:true},
+    sov:{wall:'#b8b6ae',win:'#2a3036',frame:'#d8d6ce',ww:0.5,wh:0.46,panel:true},nordic:{wall:'#d8d2c4',win:'#232a30',frame:'#ffffff',ww:0.46,wh:0.6},nordic2:{wall:'#9e4a3c',win:'#232a30',frame:'#f4f1ea',ww:0.42,wh:0.58},
+    india:{wall:'#e9c46a',win:'#2a2f33',frame:'#c0392b',ww:0.36,wh:0.5,rail:true},india2:{wall:'#9fc9b8',win:'#2a2f33',frame:'#f4f1ea',ww:0.36,wh:0.5,rail:true},
+    china:{wall:'#cfcac0',win:'#27313a',frame:'#9a958c',ww:0.58,wh:0.5,ac:true},seasia:{wall:'#e6dcc6',win:'#27313a',frame:'#b0a690',ww:0.5,wh:0.5,rail:true,ac:true}}[style];
   const cm=document.createElement('canvas'), ce=document.createElement('canvas'); cm.width=cm.height=ce.width=ce.height=S;
   const g=cm.getContext('2d'), e=ce.getContext('2d');
   g.fillStyle=P.wall; g.fillRect(0,0,S,S); e.fillStyle='#000'; e.fillRect(0,0,S,S);
@@ -682,10 +689,15 @@ function facadeTex(style){
     g.fillStyle='rgba(0,0,0,0.13)'; g.fillRect(0,y*ch+ch-4,S,4);
     for(let x=0;x<cols;x++){
       const w=cw*P.ww, h=ch*P.wh, x0=x*cw+(cw-w)/2, y0=y*ch+(ch-h)*0.55;
+      if(P.panel){g.fillStyle='rgba(0,0,0,0.1)';g.fillRect(x*cw,y*ch,2,ch);g.fillRect(x*cw,y*ch,cw,2)}
+      if(P.shut){g.fillStyle=P.shut;g.fillRect(x0-w*0.42,y0,w*0.4,h);g.fillRect(x0+w+w*0.02,y0,w*0.4,h)}
       g.fillStyle=P.frame; g.fillRect(x0-3,y0-3,w+6,h+6);
       g.fillStyle=P.win; g.fillRect(x0,y0,w,h);
+      if(P.arch){g.fillStyle=P.frame;g.beginPath();g.arc(x0+w/2,y0,w/2+3,Math.PI,0);g.fill();g.fillStyle=P.win;g.beginPath();g.arc(x0+w/2,y0,w/2,Math.PI,0);g.fill()}
       g.fillStyle=`rgba(170,190,210,${0.12+r()*0.22})`; g.fillRect(x0,y0,w,h*0.45);
       if(r()<0.25){g.fillStyle=`rgba(240,230,210,${0.5+r()*0.3})`; g.fillRect(x0,y0,w*(r()<0.5?0.5:1),h)}
+      if(P.mash&&r()<0.3){g.fillStyle='rgba(120,80,40,0.9)';g.fillRect(x0-2,y0,w+4,h);g.fillStyle='rgba(0,0,0,0.35)';for(let k=0;k<6;k++)g.fillRect(x0,y0+k*h/6,w,1)}
+      if(P.ac&&r()<0.35){g.fillStyle='#e8e8e4';g.fillRect(x0+w*0.1,y0+h+4,w*0.55,h*0.28)}
       if(P.rail){g.fillStyle='#1a1a1a'; g.fillRect(x0-4,y0+h*0.64,w+8,3); for(let k=0;k<7;k++) g.fillRect(x0+k*w/6,y0+h*0.64,2,h*0.36)}
       if(r()<0.4){e.fillStyle=r()<0.7?'#ffcf87':'#dfe9ff'; e.globalAlpha=0.55+r()*0.45; e.fillRect(x0,y0,w,h); e.globalAlpha=1}
     }
@@ -860,7 +872,11 @@ let ENV=null, BEACH_Y=null, envAnim=[];
 const FAC={};
 const GROUND_MAT=new THREE.MeshStandardMaterial({map:T.ground,roughness:1});
 const ASPH_MAT=new THREE.MeshStandardMaterial({map:T.asphalt.clone(),roughness:0.88});
-for(const k of ['paris','ny','brick','tokyo','glass','afr','afr2']){const t=facadeTex(k);FAC[k]=new THREE.MeshStandardMaterial({map:t.map,emissiveMap:t.em,emissive:0xffffff,emissiveIntensity:0,roughness:0.8,metalness:k==='glass'?0.3:0})}
+// matériaux de façade créés à la demande (21 styles régionaux : on ne génère que ceux de la ville visitée)
+const FAC_KEYS=['paris','ny','brick','tokyo','glass','afr','afr2','arab','arab2','medit','medit2','latin','latin2','latin3','sov','nordic','nordic2','india','india2','china','seasia'];
+const FAC_MAT={};
+const facMake=k=>{const t=facadeTex(k);return FAC_MAT[k]=new THREE.MeshStandardMaterial({map:t.map,emissiveMap:t.em,emissive:0xffffff,emissiveIntensity:0,roughness:0.8,metalness:k==='glass'?0.3:0})};
+for(const k of FAC_KEYS)Object.defineProperty(FAC,k,{enumerable:true,get:()=>FAC_MAT[k]||facMake(k)});
 
 /* ================= Géométries ================= */
 const G={};
@@ -1013,42 +1029,67 @@ function facadeBox(x,y,z,w,h,d,cellW,cellH){
   for(let f=0;f<6;f++)for(let k=0;k<4;k++){const i=f*4+k,[fw,fh]=dims[f];if(!fw){uv.setXY(i,0.004,0.996);continue}uv.setXY(i,uv.getX(i)*fw/cellW/8,uv.getY(i)*fh/cellH/8)}
   g.translate(x,y,z); return g;
 }
-function osmBuild(O,ctx){const T2=TOTAL/2+6,base=REGION.base,{paint,gravel,metal,wall,roof,conc,wood,glow}=ctx.b,facGeo=ctx.facGeo,addCol=ctx.col,newDoors=[];
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+// architecture selon la région du monde (sous-régions de l'ONU) : façades, couleurs des maisons, forme et couleur des toits
+const SR_BASE={cotonou:'Western Africa',paris:'Western Europe',newyork:'Northern America',tokyo:'Eastern Asia'};
+function archOf(){const iso=REGION.iso||({cotonou:'BJ',paris:'FR',newyork:'US',tokyo:'JP'})[REGION.id]||'',sr=REGION.sr||(WORLD&&WORLD.countries[iso]||{}).sr||SR_BASE[REGION.base]||'';
+  const A=(pal,walls,roofs,pitch,parapet)=>({pal,walls,roofs,pitch,parapet});
+  if(iso==='JP')return A(['tokyo','glass'],['#e8e4dc','#d8d4cc','#c9c2b4'],['#4a5560','#3a4048','#6b6e70'],0.38);
+  if(W_DESERT.has(iso)||sr==='Northern Africa'||sr==='Western Asia'||sr==='Central Asia')return A(['arab','arab2','arab'],['#dcc7a0','#e8dcc4','#cdb592','#f0e6d2'],['#cdb592'],0,true);
+  if(sr==='Southern Europe')return A(['medit','medit2','medit'],['#f2ece0','#e8c9a0','#efe0c2','#f6f1e6'],['#b5523b','#a8482f','#c0603f'],0.32);
+  if(sr==='Western Europe')return A(['paris','brick','nordic'],['#e8e0d0','#d9cbb0','#cfc6b4','#e4dac4'],['#5a5f66','#8a3b2e','#6b4a3a'],0.6);
+  if(sr==='Northern Europe')return A(['nordic','nordic2','brick'],['#d8d2c4','#9e4a3c','#e8d9a0','#f2ece0','#4a6b8a'],['#3a3f46','#5a5f66','#2f3a2f'],0.7);
+  if(sr==='Eastern Europe')return A(['sov','sov','brick','nordic'],['#d8d2c4','#c9c2b4','#e8dcc4'],['#5a6b5a','#8a3b2e','#5a5f66'],0.6);
+  if(sr==='Northern America'||sr==='Australia and New Zealand')return A(['ny','brick','glass'],['#e9e4da','#c8b38a','#8eaecb','#d9d2c4','#a9b8a0'],['#4a4f56','#6b6e70','#7a5a3a'],0.42);
+  if(sr==='South America'||sr==='Central America'||sr==='Caribbean')return A(['latin','latin2','latin3'],['#e8b86b','#7fb3c8','#d97b6c','#a9c97a','#f2d06b','#f4f1ea'],['#b5523b','#9aa0a6'],0.22);
+  if(sr==='Southern Asia')return A(['india','india2','afr2'],['#e9c46a','#9fc9b8','#f2a07b','#e8dcc4','#c9b8e0'],['#9aa0a6','#b5523b'],0,true);
+  if(sr==='Eastern Asia')return A(['china','glass','china'],['#cfcac0','#e0dbd0','#bdb6a8'],['#4a5560','#6b6e70'],0.35);
+  if(sr==='South-Eastern Asia'||sr==='Melanesia'||sr==='Polynesia'||sr==='Micronesia')return A(['seasia','china','glass'],['#e6dcc6','#f4f1ea','#a9c97a','#f2d06b'],['#b5523b','#4a5560','#9aa0a6'],0.4);
+  return A(['afr','afr2'],['#e8dcc4','#d9cbb0','#cfd8d4','#efe6c8','#e6d2c0'],['#9aa0a6','#8a6a4a','#a65a3a'],0.14)}
+// toit à deux pentes orienté comme le bâtiment (tôle, tuiles, ardoise selon la région) + pignons
+function pitchedRoof(b,cx,cz,w,d,a,h,AR,wallC){const sl=AR.pitch,rise=Math.tan(sl)*(d/2+0.3),col=AR.roofs[Math.floor(((cx*7+cz*13)%97+97)%97/97*AR.roofs.length)],ca=Math.cos(a),sa=Math.sin(a);
+  for(const s of [-1,1]){const len=(d/2+0.5)/Math.cos(sl),zz=s*(d/4+0.15),x=cx-sa*zz,z=cz+ca*zz;b.roof.add(x,h+rise/2+0.02,z,w+0.6,1,len,col,s*sl,-a,0)}
+  for(const s of [-1,1])b.gable.add(cx+ca*s*(w/2-0.1),h,cz+sa*s*(w/2-0.1),0.2,rise,d,wallC||'#e8dcc4',0,-a,0);
+  b.metal.add(cx,h+rise+0.02,cz,w+0.6,0.08,0.3,'#8d9092',0,-a,0)}
+function osmBuild(O,ctx){const T2=qHalf(),base=REGION.base,{paint,gravel,metal,wall,roof,conc,wood,glow}=ctx.b,facGeo=ctx.facGeo,addCol=ctx.col,newDoors=[];
+const pick=a=>a[Math.floor(Math.random()*a.length)],Y=TER.ok?terY:()=>0;
   const inQ=(x,z)=>Math.abs(x)<T2&&Math.abs(z)<T2;
   const wet=(x,z)=>{if(!ENV||ENV.kind==='none')return false;const o=((ENV.ax==='z'?z:x)-ENV.edge)*ENV.sg;return ENV.kind==='ocean'?o>-4:(o>-4&&o<ENV.width+12)};
   const hh=(x,z)=>(((Math.round(x*7)*73856093)^(Math.round(z*7)*19349663))>>>0)/4294967296;
   // routes
   for(const [cls,wd,ni,surf,pts] of O.r){const dirt=/unpaved|dirt|ground|sand|earth|compacted|gravel/.test(surf)||(base==='cotonou'&&cls>=3&&surf!=='asphalt'&&surf!=='paved'),col=cls>=6?'#9a958c':dirt?'#a8673f':'#3f4245',w=Math.max(1.5,wd);
     for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],mx=(x0+x1)/2,mz=(z0+z1)/2,L=Math.hypot(x1-x0,z1-z0);if(L<0.2||inQ(mx,mz)||wet(mx,mz))continue;
-      const a=Math.atan2(z1-z0,x1-x0);paint.add(mx,0.012+cls*0.001,mz,L+0.02,0.03,w,col,0,-a,0);
-      if(!inQ(x1,z1))paint.add(x1,0.012+cls*0.001,z1,w,0.03,w,col,0,-a,0);
-      if(cls<=2&&L>8&&!dirt)for(let t=4;t<L-2;t+=9){const px=x0+(x1-x0)*t/L,pz=z0+(z1-z0)*t/L;paint.add(px,0.05,pz,3,0.004,0.14,'#e6e0cf',0,-a,0)}}}
+      const a=Math.atan2(z1-z0,x1-x0),ns=TER.ok?Math.max(1,Math.ceil(L/12)):1,sl=L/ns;
+      // sur le relief, la rue suit la pente par tronçons de 12 m
+      for(let q=0;q<ns;q++){const ax=x0+(x1-x0)*q/ns,az=z0+(z1-z0)*q/ns,bx=x0+(x1-x0)*(q+1)/ns,bz=z0+(z1-z0)*(q+1)/ns,ya=Y(ax,az),yb=Y(bx,bz);paint.add((ax+bx)/2,(ya+yb)/2+0.012+cls*0.001,(az+bz)/2,sl+0.02,0.03,w,col,0,-a,Math.atan2(yb-ya,sl))}
+      if(!inQ(x1,z1))paint.add(x1,Y(x1,z1)+0.012+cls*0.001,z1,w,0.03,w,col,0,-a,0);
+      if(cls<=2&&L>8&&!dirt)for(let t=4;t<L-2;t+=9){const px=x0+(x1-x0)*t/L,pz=z0+(z1-z0)*t/L;paint.add(px,Y(px,pz)+0.05,pz,3,0.004,0.14,'#e6e0cf',0,-a,0)}}}
   // voies ferrées
   for(const pts of O.rl)for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],mx=(x0+x1)/2,mz=(z0+z1)/2,L=Math.hypot(x1-x0,z1-z0);if(inQ(mx,mz))continue;const a=Math.atan2(z1-z0,x1-x0),nx=-Math.sin(a),nz=Math.cos(a);
-    gravel.add(mx,0,mz,L,0.12,3.2,'#8f877c',0,-a,0);for(const s of [-0.72,0.72])metal.add(mx+nx*s,0.12,mz+nz*s,L,0.14,0.1,'#6b6f73',0,-a,0)}
+    const ym=Y(mx,mz);gravel.add(mx,ym,mz,L,0.12,3.2,'#8f877c',0,-a,0);for(const s of [-0.72,0.72])metal.add(mx+nx*s,ym+0.12,mz+nz*s,L,0.14,0.1,'#6b6f73',0,-a,0)}
   // parcs, eau
   const poly=(pts,mat,y)=>{if(pts.length<4)return;const sh=new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ShapeGeometry(sh);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,mat);m.position.y=y;m.receiveShadow=true;m.userData.ownGeo=true;ctx.grp.add(m);return m};
-  for(const [k,pts] of O.p){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,MAT.lawn,0.03)}
-  for(const pts of O.w){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,WATER,0.04)}
+  for(const [k,pts] of O.p){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,MAT.lawn,Y(c[0],c[1])+0.03)}
+  for(const pts of O.w){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,WATER,Y(c[0],c[1])+0.04)}
   // grille des routes (pour orienter les portes)
   const RG={},rk=(x,z)=>Math.floor(x/20)+','+Math.floor(z/20);
   for(const [cls,wd,ni,surf,pts] of O.r){if(cls>=6)continue;for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],L=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.ceil(L/8));
     for(let k=0;k<=n;k++){const x=x0+(x1-x0)*k/n,z=z0+(z1-z0)*k/n;(RG[rk(x,z)]=RG[rk(x,z)]||[]).push([x,z,ni])}}}
   const nearRoad=(x,z)=>{let best=1e9,ni=-1;const gx=Math.floor(x/20),gz=Math.floor(z/20);for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)for(const p of (RG[(gx+i)+','+(gz+j)]||[])){const d=Math.hypot(p[0]-x,p[1]-z);if(d<best){best=d;ni=p[2]}}return [best,ni]};
   // bâtiments
-  const pal={cotonou:[['afr',0],['afr2',0]],paris:[['paris',0]],newyork:[['ny',0],['brick',0],['glass',0]],tokyo:[['tokyo',0],['glass',0]]}[base]||[['afr',0]];
+  const AR=archOf(),pal=AR.pal.map(k=>[k,0]);
   let n=0;
   for(const [cx,cz,w,d,a,h0,kind,fill,colr,bn,shp] of O.b){if(inQ(cx,cz)||wet(cx,cz)||lmNear(cx,cz,8))continue;
     const r=hh(cx,cz);let h=h0;
     if(!h){h=base==='cotonou'?(kind===2||kind===3?7+r*9:kind===7?2.6:3.3+(r<0.35?3.1:0)+(r<0.08?3.1:0)):base==='paris'?15+r*8:base==='newyork'?12+r*r*60:9+r*24}
     h=Math.max(2.6,Math.min(h,320));
+    // pied du bâtiment au point le plus bas du terrain (pas de maison qui flotte sur une pente)
+    let yb=0;if(TER.ok){const ca2=Math.cos(a),sa2=Math.sin(a),yc=Y(cx,cz);yb=Math.min(yc,Y(cx+ca2*w/2,cz+sa2*w/2),Y(cx-ca2*w/2,cz-sa2*w/2),Y(cx-sa2*d/2,cz+ca2*d/2),Y(cx+sa2*d/2,cz-ca2*d/2))-0.1;h+=yc-yb}
     const small=kind===7||(base==='cotonou'&&h<4.5&&w*d<120);
-    if(small){const c=colr||pick(['#e8dcc4','#d9cbb0','#cfd8d4','#efe6c8','#e6d2c0']);wall.add(cx,0,cz,w,h,d,c,0,-a,0);roof.add(cx,h,cz,w+0.5,0.08,d+0.5,pick(['#9aa0a6','#8a6a4a','#a65a3a']),0,-a,0)}
+    if(small){const c=colr||pick(AR.walls);wall.add(cx,yb,cz,w,h,d,c,0,-a,0);if(AR.pitch)pitchedRoof(ctx.b,cx,cz,w,d,a,yb+h,AR,c);else{roof.add(cx,yb+h,cz,w+0.5,0.08,d+0.5,pick(AR.roofs),0,-a,0);if(AR.parapet)conc.add(cx,yb+h,cz,w+0.1,0.45,d+0.1,c,0,-a,0)}}
     else{const key=osmStyle(kind,h,base,r,pal,colr),cw=key==='glass'?2.4:3.2;
-      if(shp&&shp.length>=5){(facGeo[key]=facGeo[key]||[]).push(facadePoly(shp.map(p=>[cx+p[0],cz+p[1]]),0,h,cw,3.1))}
-      else{const g=facadeBox(0,0,0,w,h,d,cw,3.1);g.rotateY(-a);g.translate(cx,0,cz);(facGeo[key]=facGeo[key]||[]).push(g);
-        if(base==='cotonou')conc.add(cx,h,cz,w+0.1,0.6,d+0.1,'#d9d2c4',0,-a,0)}}
+      if(shp&&shp.length>=5){(facGeo[key]=facGeo[key]||[]).push(facadePoly(shp.map(p=>[cx+p[0],cz+p[1]]),yb,h,cw,3.1))}
+      else{const g=facadeBox(0,0,0,w,h,d,cw,3.1);g.rotateY(-a);g.translate(cx,yb,cz);(facGeo[key]=facGeo[key]||[]).push(g);
+        if(AR.pitch&&h<13&&kind!==4&&kind!==5&&w*d<500)pitchedRoof(ctx.b,cx,cz,w,d,a,yb+h,AR,'#d9d2c4');else if(AR.parapet||base==='cotonou')conc.add(cx,yb+h,cz,w+0.1,0.6,d+0.1,'#d9d2c4',0,-a,0)}}
     // collisions : petits carrés le long du grand côté
     const Lg=Math.max(w,d),S=Math.min(w,d),ux=Math.cos(a)*(w>=d?1:0)-Math.sin(a)*(w>=d?0:1),uz=Math.sin(a)*(w>=d?1:0)+Math.cos(a)*(w>=d?0:1),k=Math.max(1,Math.ceil(Lg/S));
     for(let i=0;i<k;i++){const t=-Lg/2+S/2+(Lg-S)*(k>1?i/(k-1):0.5),px=cx+ux*t,pz=cz+uz*t,e=S*0.5*(Math.abs(Math.cos(a))+Math.abs(Math.sin(a)))*0.86;addCol(px-e,pz-e,px+e,pz+e)}
@@ -1056,7 +1097,7 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
     {const ca=Math.cos(a),sa=Math.sin(a);let bestF=null;
       for(const [u,v,hw] of [[w/2,0,d],[-w/2,0,d],[0,d/2,w],[0,-d/2,w]]){const ln=Math.hypot(u,v),nx=(u*ca-v*sa)/ln,nz=(u*sa+v*ca)/ln,fx=cx+u*ca-v*sa,fz=cz+u*sa+v*ca,[dr,ni]=nearRoad(fx+nx*3,fz+nz*3);
         if(hw>=2.2&&(!bestF||dr<bestF.dr))bestF={dr,ni,nx,nz,fx,fz}}
-      if(bestF){const {nx,nz,fx,fz}=bestF,ry=Math.atan2(nx,nz);wood.add(fx+nx*0.06,0,fz+nz*0.06,1.3,2.25,0.12,'#4a3426',0,ry,0);glow.add(fx+nx*0.25,2.45,fz+nz*0.25,0.5,0.12,0.25,'#ffffff',0,ry,0);
+      if(bestF){const {nx,nz,fx,fz}=bestF,ry=Math.atan2(nx,nz),yd=Y(fx,fz);wood.add(fx+nx*0.06,yd,fz+nz*0.06,1.3,2.25,0.12,'#4a3426',0,ry,0);glow.add(fx+nx*0.25,yd+2.45,fz+nz*0.25,0.5,0.12,0.25,'#ffffff',0,ry,0);
         const floors=Math.max(1,Math.round(h/3.1)),area=w*d,res=kind===2||(!small&&kind!==3&&kind!==4&&kind!==5&&kind!==6),shopG=kind===3||(base!=='cotonou'&&!small&&r<0.35&&floors>2);
         const per=Math.max(1,Math.min(16,Math.round(area*0.72/72))),street=bestF.ni>=0&&O.n[bestF.ni]?O.n[bestF.ni]:'',num=1+Math.floor(r*120);
         newDoors.push({x:fx+nx*1.5,z:fz+nz*1.5,cx,cz,nx,nz,floors,per,kind,small,res,shopG,bname:bn||'',seed:Math.floor(r*1e9)+n,addr:(street?num+' '+street:'Bâtiment n° '+(n+1))})}}
@@ -1064,12 +1105,14 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
   for(const d of newDoors)OSMDOORS.push(d);osmGrid();osmAttachPOI(O,newDoors,!ctx.first);
   // enseignes lumineuses au-dessus des portes des commerces et centres commerciaux
   for(const dd of newDoors){const P=dd.poi,com=P?!!poiInfo(P.t).k:dd.kind===3;if(!com)continue;const ry=Math.atan2(dd.nx,dd.nz),fx=dd.x-dd.nx*1.5,fz=dd.z-dd.nz*1.5,mall=P&&P.t==='mall',col=P?poiInfo(P.t).c:'#e0803a';
-    glow.add(fx+dd.nx*0.2,mall?5.2:2.75,fz+dd.nz*0.2,mall?7:2.6,mall?1.3:0.55,0.12,col,0,ry,0);
-    if(!mall)metal.add(fx+dd.nx*0.6,2.45,fz+dd.nz*0.6,3,0.08,1.1,col,0,ry,0)}console.log('OSM',O.city||O.tile,n,'bâtiments',newDoors.length,'portes',OSMPOI.length,'lieux');return n;
+    const ys=Y(fx,fz);glow.add(fx+dd.nx*0.2,ys+(mall?5.2:2.75),fz+dd.nz*0.2,mall?7:2.6,mall?1.3:0.55,0.12,col,0,ry,0);
+    if(!mall)metal.add(fx+dd.nx*0.6,ys+2.45,fz+dd.nz*0.6,3,0.08,1.1,col,0,ry,0)}console.log('OSM',O.city||O.tile,n,'bâtiments',newDoors.length,'portes',OSMPOI.length,'lieux');return n;
 }
+// taille du quartier jouable au centre de la région (0 pour une région de passage, sans quartier : pleine campagne, route…)
+const qHalf=()=>REGION.noQuarter?0:TOTAL/2+6;
 function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];TILES={};TGEN++;TILEV++;
   seed=newSeed; R=mulberry32(seed);
-  closeAllBld(); BLD=[]; if(drive){scene.remove(drive.mesh);drive=null} seat=null; curFloor=null; for(const m of mons)scene.remove(m.g); mons=[]; for(const p of projs)scene.remove(p.mesh); projs=[];
+  closeAllBld(); BLD=[]; if(drive&&!KEEP_DRIVE){scene.remove(drive.mesh);drive=null} seat=null; curFloor=null; for(const m of mons)scene.remove(m.g); mons=[]; for(const p of projs)scene.remove(p.mesh); projs=[];
   if(world){scene.remove(world);disposeGroup(world)}
   world=new THREE.Group(); scene.add(world);
   cols=[]; places={homes:[],shops:[],stalls:[],maquisSeats:[],cook:[],social:[],nightSocial:[],grill:null,doors:[]};
@@ -1081,16 +1124,18 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];T
   const posSeed=(x,z)=>((Math.round(x*10)*73856093)^(Math.round(z*10)*19349663)^seed)>>>0;
 
   envAnim=[]; BEACH_Y=null;
-  if(REGION.gen==='row') rowCity(); else cotonouLayout();
+  if(REGION.noQuarter){} else if(REGION.gen==='row') rowCity(); else cotonouLayout();
   environment(); buildLandmarks(b); if(OSMD)osmLayer();
 
   b.build(world);
+  // quartier des villes du monde : façades dans le style du pays (méditerranéen, arabe, soviétique, latino…)
+  if(REGION.world){const AR=archOf();for(const k of ['paris','ny','tokyo']){const L=facGeo[k];if(!L||AR.pal.includes(k))continue;delete facGeo[k];L.forEach((g,i)=>{const nk=AR.pal[i%AR.pal.length];(facGeo[nk]=facGeo[nk]||[]).push(g)})}}
   for(const k in facGeo){const m=new THREE.Mesh(mergeGeos(facGeo[k]),FAC[k]); m.castShadow=HIGH; m.receiveShadow=true; own(m); m.material=FAC[k]; m.userData.own=false; m.userData.ownGeo=true; world.add(m)}
   const wg=new THREE.BufferGeometry(); wg.setAttribute('position',new THREE.Float32BufferAttribute(wireArr,3));
   wires=new THREE.LineSegments(wg,new THREE.LineBasicMaterial({color:0x1b1b1b})); wires.userData.own=true; world.add(wires);
   const im=new THREE.InstancedMesh(MOTO_GEO,MAT.atlas,Math.max(1,motoSpots.length)); im.count=motoSpots.length;
   motoSpots.forEach((s,i)=>im.setMatrixAt(i,M4(s[0],0,s[1],0,s[2]))); im.castShadow=HIGH; im.receiveShadow=true; im.frustumCulled=false; world.add(im);
-  const ic=new THREE.InstancedMesh(CAR_GEO,MAT.atlasInst,Math.max(1,carSpots.length)); ic.count=carSpots.length;
+  const ic=new THREE.InstancedMesh(CAR_GEO,MAT.atlasInst,Math.max(1,carSpots.length)); ic.setColorAt(0,new THREE.Color(1,1,1)); ic.count=carSpots.length;
   carSpots.forEach((s,i)=>{ic.setMatrixAt(i,M4(s[0],0,s[1],0,s[2],0,s[4]||1,s[4]||1,s[4]||1));ic.setColorAt(i,L(s[3]))}); if(ic.instanceColor)ic.instanceColor.needsUpdate=true; ic.castShadow=HIGH; ic.receiveShadow=true; ic.frustumCulled=false; world.add(ic); VEH={mIM:im,cIM:ic,m:motoSpots,c:carSpots};
   worldCols=cols;
 
@@ -1507,6 +1552,9 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];T
   function buildingRow(sd,u0,u1,D){
     const st=REGION.style, w=u1-u0, um=(u0+u1)/2;
     ROWFOOT=rowColl(sd,u0,u1,0,-D);
+    // villes du monde : immeubles dans le style et à la hauteur typiques du pays (au lieu d'immeubles parisiens partout)
+    if(REGION.world){const AR=archOf();if(!AR.pal.includes(st)){const HR={arab:[8,18],medit:[11,20],sov:[15,45],nordic:[10,18],latin:[6,14],india:[9,20],china:[18,60],seasia:[9,22],afr:[6,12],brick:[10,20]};
+      return tower(sd,u0,u1,D,w,um,pick(AR.pal),HR[AR.pal[0]]||[10,24])}}
     if(st==='paris') return haussmann(sd,u0,u1,D,w,um);
     if(st==='ny') return (sd.idx===AV||chance(.18))?tower(sd,u0,u1,D,w,um,chance(.5)?'ny':'glass'):brownstone(sd,u0,u1,D,w,um);
     return (sd.idx===AV&&chance(.6))?tower(sd,u0,u1,D,w,um,'tokyo'):tokyoHouse(sd,u0,u1,D,w,um);
@@ -1569,8 +1617,8 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];T
     if(chance(.25)){const p2=W2(sd,um,-D/2);woodC.add(p2[0],H+2.2,p2[1],2.6,3,2.6,'#ffffff');cone.add(p2[0],H+5.2,p2[1],2.9,1.1,2.9,'#3a3028');for(const a of [-1,1])for(const c of [-1,1])metalC.add(p2[0]+a,H,p2[1]+c,0.08,2.2,0.08,'#333')}
     for(let k=0;k<3;k++) put(plasticS,sd,u1-0.8+k*0.3,0.15,0.6,0.5,0.55,0.5,'#1a1a1a');
   }
-  function tower(sd,u0,u1,D,w,um,key){
-    const h=REGION.style==='tokyo'?rr(14,42):rr(30,130);
+  function tower(sd,u0,u1,D,w,um,key,hr){
+    const h=hr?rr(hr[0],hr[1]):REGION.style==='tokyo'?rr(14,42):rr(30,130);
     const p=W2(sd,um,-D/2), alongX=sd.u[0]!==0;
     (facGeo[key]=facGeo[key]||[]).push(facadeBox(p[0],4.4,p[1],alongX?w:D,h,alongX?D:w,key==='glass'?2.0:2.8,3.3));
     const foot=ROWFOOT, rP=put(conc,sd,um,0,-D/2,w,4.4,D,'#c9c4b8');
@@ -2116,7 +2164,7 @@ function tickWalkIns(dt){
   }
 }
 function groundY(x,z,y){
-  let best=(!inside&&BEACH_Y&&ENV&&z>ENV.edge)?BEACH_Y(z-ENV.edge):0;
+  let best=(!inside&&BEACH_Y&&ENV&&z>ENV.edge)?BEACH_Y(z-ENV.edge):terY(x,z);
   for(const d of openB){if(x<d.bb[0]||x>d.bb[2]||z<d.bb[1]||z>d.bb[3])continue;
     for(const s of d.open.surf){const r=s.r;if(x<r[0]||x>r[2]||z<r[1]||z>r[3])continue;
       let sy=s.y;if(s.p0){const dx=s.p1[0]-s.p0[0],dz=s.p1[1]-s.p0[1],t=Math.max(0,Math.min(1,((x-s.p0[0])*dx+(z-s.p0[1])*dz)/(dx*dx+dz*dz))); sy=s.y+(s.y1-s.y)*t}
@@ -2479,8 +2527,8 @@ let traffic=[], trafficMesh=null, headMesh=null;
 const headMat=new THREE.MeshBasicMaterial({color:0xfff2c0,toneMapped:false});
 function makeTraffic(){
   for(const m of [trafficMesh,headMesh]) if(m){npcRoot.remove(m);m.dispose&&m.dispose()}
-  traffic=[]; const n=REGION.env.cars, sc=REGION.base==='tokyo'?0.86:1;
-  trafficMesh=new THREE.InstancedMesh(CAR_GEO,MAT.atlasInst,n); trafficMesh.castShadow=HIGH; trafficMesh.receiveShadow=true; trafficMesh.frustumCulled=false;
+  traffic=[]; const n=REGION.noQuarter?0:REGION.env.cars, sc=REGION.base==='tokyo'?0.86:1;
+  trafficMesh=new THREE.InstancedMesh(CAR_GEO,MAT.atlasInst,Math.max(1,n)); trafficMesh.setColorAt(0,new THREE.Color(1,1,1)); trafficMesh.count=n; trafficMesh.castShadow=HIGH; trafficMesh.receiveShadow=true; trafficMesh.frustumCulled=false;
   headMesh=new THREE.InstancedMesh(G.box,headMat,n*2); headMesh.frustumCulled=false;
   for(let k=0;k<n;k++){
     const c={i:Math.floor(Math.random()*(N+1)),j:Math.floor(Math.random()*(N+1)),t:Math.random(),v:5,vmax:mrr(7,10)*(REGION.base==='cotonou'?0.8:1),ang:0,px:0,pz:0,sc};
@@ -2602,6 +2650,7 @@ function placeLabel(x,z){
   if(inside) return inside.door.name;
   if(curFloor) return curFloor.label;
   for(const l of LANDMARKS) if(Math.hypot(l.x-x,l.z-z)<l.r) return l.name;
+  if(REGION.noQuarter) return 'Hors agglomération';
   const mb={x0:sPos(MARKET.bi)+W/2,x1:sPos(MARKET.bi+1)-W/2,z0:sPos(MARKET.bj)+W/2,z1:sPos(MARKET.bj+1)-W/2};
   if(x>mb.x0&&x<mb.x1&&z>mb.z0&&z<mb.z1) return REGION.base==='cotonou'?'Marché du quartier':REGION.market.social;
   if(ENV&&ENV.kind!=='none'){const o=(ENV.ax==='z'?z:x)-ENV.edge;if(o*ENV.sg>-1.5)return ENV.kind==='ocean'?'Plage':REGION.waterName?'Quai · '+REGION.waterName:(REGION.base==='paris'?'Quai de la Seine':REGION.base==='newyork'?'East River':'Quai de la rivière')}
@@ -2617,15 +2666,15 @@ function paintBase(g,X,Z,k,W,H,fs,opt){
   const vis=(x,z,m)=>{const px=X(x),pz=Z(z);return px>-m&&pz>-m&&px<W+m&&pz<H+m};
   g.fillStyle=M.ground; g.fillRect(0,0,W,H);
   const row=REGION.gen==='row', lo=row?-1:0, hi=row?N+1:N;
-  const gx=OSMD?TOTAL/2+W0:ext;
+  if(REGION.noQuarter){}else{const gx=OSMD?TOTAL/2+W0:ext;
   g.fillStyle=M.street; for(let i=lo;i<=hi;i++){rect(sPos(i)-W0/2,-gx,sPos(i)+W0/2,gx);rect(-gx,sPos(i)-W0/2,gx,sPos(i)+W0/2)}
   if(!row){g.fillStyle=M.avenue;rect(-gx,sPos(AV)-W0/2+0.8,gx,sPos(AV)+W0/2-0.8)}
   if(row){g.fillStyle=M.side;for(let bi=-1;bi<=N;bi++)for(let bj=-1;bj<=N;bj++)rect(sPos(bi)+W0/2,sPos(bj)+W0/2,sPos(bi+1)-W0/2,sPos(bj+1)-W0/2)}
-  g.fillStyle=M.plaza; rect(sPos(MARKET.bi)+W0/2,sPos(MARKET.bj)+W0/2,sPos(MARKET.bi+1)-W0/2,sPos(MARKET.bj+1)-W0/2);
+  g.fillStyle=M.plaza; rect(sPos(MARKET.bi)+W0/2,sPos(MARKET.bj)+W0/2,sPos(MARKET.bi+1)-W0/2,sPos(MARKET.bj+1)-W0/2);}
   if(ENV){const e=ENV.edge,s=ENV.sg;
     if(ENV.kind==='ocean'){g.fillStyle=M.sand;rect(-ext*3,e,ext*3,e+s*21);g.fillStyle=M.water;rect(-ext*3,e+s*21,ext*3,e+s*3000)}
     else{g.fillStyle=M.water;if(ENV.ax==='z')rect(-ext*3,e,ext*3,e+s*ENV.width);else rect(e,-ext*3,e+s*ENV.width,ext*3)}}
-  for(const O of osmSets()){const q=TOTAL/2+6,inQ=(x,z)=>Math.abs(x)<q&&Math.abs(z)<q,poly=(pts)=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p[0]),Z(p[1])):g.moveTo(X(p[0]),Z(p[1])));g.closePath();g.fill()};
+  for(const O of osmSets()){const q=qHalf(),inQ=(x,z)=>Math.abs(x)<q&&Math.abs(z)<q,poly=(pts)=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p[0]),Z(p[1])):g.moveTo(X(p[0]),Z(p[1])));g.closePath();g.fill()};
     g.fillStyle='#6f9a55';for(const [kk,pts] of O.p)poly(pts);g.fillStyle=M.water;for(const pts of O.w)poly(pts);
     g.lineCap='round';g.lineJoin='round';
     for(const [cls,wd,ni,surf,pts] of O.r){if(cls>=6&&k<1.2)continue;g.strokeStyle=cls>=6?M.street+'99':cls<=2?M.avenue:M.street;g.lineWidth=Math.max(cls>=6?0.8:1.5,wd*k);g.beginPath();let on=false;
@@ -2734,7 +2783,10 @@ function mvZoomAt(f,px,py){if(!mapLayer)return;const k0=MV.k,wx=(px-MV.W/2)/k0+M
   addEventListener('resize',()=>{if(mapOpen&&mapTab==='q'){MV.key='';mvRedraw()}});
   addEventListener('keydown',e=>{if(!mapOpen||mapTab!=='q')return;if(e.key==='+'||e.key==='=')mvZoomAt(1.4,MV.W/2,MV.H/2);if(e.key==='-')mvZoomAt(1/1.4,MV.W/2,MV.H/2)});}
 function haversine(a,b,c,d){const R0=6371,r=Math.PI/180,dl=(c-a)*r,dp=(d-b)*r,x=Math.sin(dp/2)**2+Math.cos(b*r)*Math.cos(d*r)*Math.sin(dl/2)**2;return 2*R0*Math.asin(Math.sqrt(x))}
-function playerLatLon(){const P=inside?{x:outsideState.door.x,z:outsideState.door.z}:dolly.position;const lat=REGION.lat-P.z/111320;return [lat,REGION.lon+P.x/(111320*Math.cos(REGION.lat*Math.PI/180))]}
+const GEO_KZ=110540,geoKX=lat=>111320*Math.cos(lat*Math.PI/180);
+function localToGeo(x,z,R=REGION){return [R.lat-z/GEO_KZ,R.lon+x/geoKX(R.lat)]}
+function geoToLocal(lat,lon,R=REGION){return [(lon-R.lon)*geoKX(R.lat),-(lat-R.lat)*GEO_KZ]}
+function playerLatLon(){const P=inside?{x:outsideState.door.x,z:outsideState.door.z}:dolly.position;return localToGeo(P.x,P.z)}
 function drawCountry(){
   const C=COUNTRY[REGION.id], svg=$('#countrymap'); let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
   for(const p of C.polys)for(const [x,y] of p){mnx=Math.min(mnx,x);mxx=Math.max(mxx,x);mny=Math.min(mny,y);mxy=Math.max(mxy,y)}
@@ -2887,6 +2939,7 @@ function statusText(n){
 const E=(n,m,f)=>n.female?f:m;
 function makeNPCs(){
   npcs.forEach(n=>{npcRoot.remove(n.g);n.geos.forEach(g=>g.dispose());n.lt.dispose()}); npcs.length=0;
+  if(REGION.noQuarter)return;
   const roster=['vendeuse','zem','vendeuse','couture','maquis','coiffure','zem','tel','alim','vendeuse','cyber','menuiserie','vendeuse','zem','alim','cyber','coiffure','vendeuse','couture','maquis','tel','zem','vendeuse','cyber','alim','vendeuse','zem','couture','vendeuse','cyber'];
   const count=HIGH?30:18;
   for(let i=0;i<count;i++){
@@ -2954,7 +3007,7 @@ function updateSky(dt){
   cT.copy(C.nightTop).lerp(C.dayTop,dayF).lerp(C.dawnTop,dawn*0.5).lerp(C.rainTop,rainF*0.7*dayF);
   cH.copy(C.nightHor).lerp(C.dayHor,dayF).lerp(C.dawnHor,dawn*0.7).lerp(C.rainHor,rainF*0.7*dayF);
   const u=skyMat.uniforms; u.sunDir.value.copy(s); u.cTop.value.copy(cT); u.cHor.value.copy(cH); u.night.value=nightF; u.cloud.value=cloudF; u.rain.value=rainF; u.time.value+=dt;
-  FOG.color.copy(cH); FOG.density=GFXD*(REGION.gen==='row'?0.0042:0.0055)+rainF*0.012+nightF*0.004;
+  FOG.color.copy(cH); FOG.density=GFXD*(REGION.gen==='row'?0.0042:0.0055)*(REGION.noQuarter?0.3:OSMD&&TER.ok?0.38:1)+rainF*0.012+nightF*0.004;
   const p=dolly.position, inF=inside?0.12:(inBldNow&&!HIGH?0.55:1);
   sun.position.set(p.x+s.x*130,Math.max(s.y,0.04)*130,p.z+s.z*130); sun.target.position.copy(p);
   const warm=1-THREE.MathUtils.smoothstep(s.y,0.05,0.4); sun.color.setRGB(1,1-0.28*warm,1-0.5*warm);
@@ -2963,7 +3016,7 @@ function updateSky(dt){
   hemi.intensity=(0.1+0.35*dayF)*(inside?0.55:1); hemi.color.copy(cH).lerp(cT,0.25); hemi.groundColor.setRGB(0.32,0.17,0.1).multiplyScalar(0.4+0.6*dayF);
   renderer.toneMappingExposure=inside?1.05:0.95+nightF*0.35;
   MAT.winLit.emissiveIntensity=nightF*1.6+(1-dayF)*0.3;
-  for(const k in FAC) FAC[k].emissiveIntensity=nightF*1.3;
+  for(const k in FAC_MAT) FAC_MAT[k].emissiveIntensity=nightF*1.3;
   MAT.bulb.color.setRGB(0.4+0.6*nightF,0.38+0.5*nightF,0.33+0.25*nightF);
   MAT.skyPane.color.copy(cH).multiplyScalar(0.6+1.1*dayF);
   MAT.glow.emissiveIntensity=0.6+0.5*nightF;
@@ -3123,7 +3176,7 @@ let CG=null,CGref=null,CGn=-1;const CGS=16;
 function colsNear(x,z){if(CGref!==worldCols||CGn!==worldCols.length){CG=new Map();CG.big=[];for(const c of worldCols){const i0=Math.floor(c[0]/CGS),i1=Math.floor(c[2]/CGS),j0=Math.floor(c[1]/CGS),j1=Math.floor(c[3]/CGS);
     if((i1-i0+1)*(j1-j0+1)>64){CG.big.push(c);continue}for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const k=i*100003+j;let a=CG.get(k);if(!a)CG.set(k,a=[]);a.push(c)}}CGref=worldCols;CGn=worldCols.length}
   const a=CG.get(Math.floor(x/CGS)*100003+Math.floor(z/CGS));return a?a.concat(CG.big):CG.big}
-function blocked(x,z){const r=0.3,lim=OSMD?1e7:TOTAL/2+200;if(Math.abs(x)>lim||Math.abs(z)>lim)return true;if(!inside){const y=dolly.position.y;for(const b of STATIC_COLS)if(b[4]<y+1.6&&b[5]>y+0.35&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true}for(const b of (cols===worldCols&&!inside?colsNear(x,z):cols))if(!b.off&&!(b.water&&inIsland(x,z))&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true;
+function blocked(x,z){const r=0.3,lim=(OSMD||REGION.noQuarter)?1e7:TOTAL/2+200;if(Math.abs(x)>lim||Math.abs(z)>lim)return true;if(!inside){const y=dolly.position.y;for(const b of STATIC_COLS)if(b[4]<y+1.6&&b[5]>y+0.35&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true}for(const b of (cols===worldCols&&!inside?colsNear(x,z):cols))if(!b.off&&!(b.water&&inIsland(x,z))&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true;
   if(!inside&&dynCols.length){const y=dolly.position.y;for(const b of dynCols)if(b[4]<y+1.6&&b[5]>y+0.35&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true}return false}
 function movePlayer(mx,mz,speed,dt){const len=Math.hypot(mx,mz);if(len<0.01)return;const k=speed*dt/Math.max(1,len);const nx=dolly.position.x+mx*k,nz=dolly.position.z+mz*k;if(!blocked(nx,dolly.position.z))dolly.position.x=nx;if(!blocked(dolly.position.x,nz))dolly.position.z=nz}
 addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON'&&(e.code==='Space'||e.code==='Enter'))return;keys.add(e.code);if(e.code==='KeyE')doorAction();if(e.code==='KeyF')attack();if(e.code==='KeyR')cycleWeapon()});
@@ -3469,7 +3522,7 @@ $('#c-gift').onclick=()=>{const n=cardNpc;if(!n)return;
     closeSheet();$('#c-say').textContent='« '+mpick(['Oh, merci beaucoup ! Il ne fallait pas.','C’est trop gentil, merci !','Merci, ça me touche vraiment.'])+' »';remember(n,'A reçu un cadeau : '+v.name);GAME.stats.gifts++;addXP(8);ev('gift');fillCard()})};
 
 /* ---- petits boulots ---- */
-function genOffers(){
+function genOffers(){if(REGION.noQuarter)return [];
   const shops=places.doors.filter(d=>d.type==='shop'),homes=places.doors.filter(d=>d.type==='home'),P=dolly.position,o=[];
   const far=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
   for(let k=0;k<2;k++){const f=mpick(shops);let t=mpick(homes),g=0;while(far(f,t)<45&&g++<20)t=mpick(homes);const d=far(f,t)+far(P,f);
@@ -3735,6 +3788,7 @@ function driveTick(dt){const D=drive;if(!D)return;
 function driveSync(){const D=drive,gy=groundY(D.x,D.z,0.2);D.mesh.position.set(D.x,gy,D.z);D.mesh.rotation.set(0,D.h,D.t==='moto'?-D.steer*0.28*Math.min(1,Math.abs(D.v)/8):0);
   dolly.position.set(D.x,gy,D.z);yaw=D.h+Math.PI;dolly.rotation.y=yaw}
 function exitVehicle(){const D=drive;if(!D)return;if(Math.abs(D.v)>2.5){toast('Ralentissez avant de descendre.');return}
+  if(D.lost){scene.remove(D.mesh);if(D.mesh.isInstancedMesh)D.mesh.dispose();drive=null;const rx=-Math.cos(D.h),rz=Math.sin(D.h);for(const a of [1.7,-1.7,0]){const x=D.x+rx*a,z=D.z+rz*a;if(!blocked(x,z)){dolly.position.set(x,0,z);break}}toast('Vous rendez le véhicule de location.');return}
   const s=D.s;s[0]=D.x;s[1]=D.z;s[2]=D.h;const im=D.t==='moto'?VEH.mIM:VEH.cIM,sc=s[4]||1;
   im.setMatrixAt(D.i,D.t==='moto'?M4(s[0],0,s[1],0,s[2]):M4(s[0],0,s[1],0,s[2],0,sc,sc,sc));im.instanceMatrix.needsUpdate=true;
   if(s.col){const ax=Math.abs(Math.sin(D.h))>0.7,dg=Math.abs(Math.abs(Math.sin(D.h))-0.7)<0.25;const hx=dg?1.6:ax?2.2:1.0,hz=dg?1.6:ax?1.0:2.2;s.col[0]=s[0]-hx;s.col[1]=s[1]-hz;s.col[2]=s[0]+hx;s.col[3]=s[1]+hz}
@@ -3988,11 +4042,11 @@ function buildLandmarks(b){
     if(S.k==='m2'||S.k==='airport'||S.k==='gare'){const sx=S.side[0]==='+'?1:-1,ax=S.side[1],
         P=(t,o)=>ax==='x'?[S.x+sx*o,S.z+t]:[S.x+t,S.z+sx*o], B2=(bt,t,o,y,lt,h,lo,c,rx=0,rz=0)=>{const p=P(t,o);return ax==='x'?A(bt,p[0],y,p[1],lo,h,lt,c,rx,0,rz):A(bt,p[0],y,p[1],lt,h,lo,c,rx,0,rz)},
         C2=(t,o,lt,lo)=>{const p=P(t,o);ax==='x'?col(p[0],p[1],lo/2,lt/2):col(p[0],p[1],lt/2,lo/2)},rot=ax==='x'?Math.PI/2:0;
-      if(S.k==='m2'){const id=REGION.lm2,L2=LM2[id],[fw,fh,fd]=L2.fit,R2=Math.max(fw,fd)/2+14;
+      if(S.k==='m2'){const id=S.id||REGION.lm2,L2=LM2[id],[fw,fh,fd]=L2.fit,R2=Math.max(fw,fd)/2+14;
         K(()=>{A('concC',S.x,0,S.z,2*R2,0.12,2*R2,'#cfc6b4');A('concC',S.x,0.12,S.z,2*R2-3,0.04,2*R2-3,'#bdb3a1')});
         const lo=-(R2+2);B2('pave',0,(lo-sx*0)*1,0.02,12,0.05,R2-Math.max(fw,fd)/2,'#d9d4ca');
         mdl(id,S.x,S.z,0.14,ax==='x'?Math.PI/2:0,fw,fh,fd);col(S.x,S.z,Math.max(fw,fd)*0.42,Math.max(fw,fd)*0.42);
-        {const p=P(0,-(Math.max(fw,fd)/2+6));plaque(p[0],0,p[1],L2.name,L2.desc+' Monument reconstitué en 3D, ville de '+REGION.city+'.')}
+        {const p=P(0,-(Math.max(fw,fd)/2+6));plaque(p[0],0,p[1],L2.name,L2.desc+' Monument reconstitué en 3D, à sa position réelle'+(L2.c?' ('+L2.c+')':'')+'.')}
         for(let k=0;k<8;k++){const a=k/8*Math.PI*2;light(S.x+Math.cos(a)*(R2-4),S.z+Math.sin(a)*(R2-4),6)}
         add({name:L2.name,x:S.x,z:S.z,r:R2,nav:{x:P(0,-R2-4)[0],z:P(0,-R2-4)[1]},desc:L2.desc})}
       else if(S.k==='airport'){const ap=REGION.geo.a,nm=ap[0],iata=ap[1];
@@ -4301,7 +4355,7 @@ async function loadModels(){
   const first=ids.filter(id=>id.startsWith('c_'));await Promise.all(first.map(fetchModel));kitLoad();charsForCity();
   lmCityModels();const furn=ids.filter(id=>id.startsWith('kenney/'));await Promise.all(furn.map(fetchModel));for(const id of ids)if(!first.includes(id)&&!furn.includes(id))await fetchModel(id);
 }
-function lmCityModels(){if(!gltfL)return;for(const id in LM_CITY){if(LM_CITY[id]!==REGION.id||!MODEL_IDX[id])continue;if(MODELS[id])lmApplyModel(id);else fetchModel(id)}}
+function lmCityModels(){if(!gltfL)return;const want=new Set(Object.keys(LM_CITY).filter(i=>LM_CITY[i]===REGION.id));for(const k in LMVIS)for(const d of LMVIS[k].models)if(LM2[d.id])want.add(d.id);for(const id of want){if(!MODEL_IDX[id])continue;if(MODELS[id])lmApplyModel(id);else fetchModel(id)}}
 function lmApplyModel(id){
   for(const k in LMVIS){const v=LMVIS[k];for(const d of v.models){if(d.id!==id||(v.inst&&v.inst[id]&&v.inst[id].parent))continue;
     const q=Math.abs(Math.round(d.ry/(Math.PI/2)))%2===1,[w,h,dd]=d.fit,o=modelInst(id,{fit:q?[dd,h,w]:[w,h,dd]});if(!o)continue;
@@ -4332,7 +4386,7 @@ function modelInst(id,opt={}){
 }
 function onModel(id){
   if(id==='v_car'){carApply();return}
-  if(LM_CITY[id]){if(LM_CITY[id]===REGION.id)lmApplyModel(id);return}
+  if(LM_CITY[id]||(typeof LM2!=='undefined'&&LM2[id])){lmApplyModel(id);return}
   if(id.startsWith('c_')&&typeof THUMB!=='undefined'){const sp=id.slice(2);delete THUMB[sp];if(partner&&partner.sp===sp){disposeCreature(partner.m);partner=null}}
   if(id==='v_zem'){applyMotoModels();for(const n of npcs)swapNpcMoto(n)}
 }
@@ -5104,7 +5158,7 @@ function loop(){
   {const P=dolly.position; if(inside)P.y=0; else if(drive){} else{const g=groundY(P.x,P.z,P.y); if(g>P.y)P.y+=(g-P.y)*Math.min(1,dt*18); else P.y=Math.max(g,P.y-7*dt)}}
   hudT-=dt;
   if(hudT<=0){
-    hudT=0.5; refreshOffset(); $('#clock').textContent=fmtTime(simTime); tilesTick();
+    hudT=0.5; refreshOffset(); $('#clock').textContent=fmtTime(simTime); tilesTick(); geoTick(); terMesh();
     const wl=weatherLabel(REGION); $('#weather').textContent=wl+' · '+tempAt(REGION)+' °C';
     $('#wx-ico').innerHTML=WX_ICO[wl==='Pluie'?'rain':wl==='Nuageux'?'cloudy':wl==='Nuit claire'?'night':'clear'];
     $('#speedtxt').textContent=timeScale===1?'Heure réelle':'×'+timeScale;
@@ -5319,21 +5373,21 @@ $('#btn-travel').onclick=()=>{wFree=false;renderCities();$('#travel').hidden=fal
 
 /* ================= Géographie réelle : mer, lac, fleuve, aéroport, gare, monuments des capitales ================= */
 const LM2={
- lm_bigben:{c:'Londres',iso:'GB',fit:[60,96,60],name:'Big Ben et le palais de Westminster',desc:'La tour de l’horloge la plus célèbre du monde, au bord de la Tamise.'},
- lm_colisee:{c:'Rome',iso:'IT',fit:[190,48,160],name:'Le Colisée',desc:'Le plus grand amphithéâtre romain, vieux de près de 2 000 ans.'},
- lm_pyramide:{c:'Le Caire',iso:'EG',fit:[230,139,230],name:'La Grande Pyramide',desc:'La dernière des sept merveilles du monde antique encore debout.'},
- lm_burj:{c:'Dubaï',iso:'AE',fit:[110,828,110],name:'Burj Khalifa',desc:'La plus haute tour du monde : 828 mètres.'},
- lm_christ:{c:'Rio de Janeiro',iso:'BR',fit:[40,38,40],name:'Le Christ Rédempteur',desc:'La statue géante qui domine Rio, bras ouverts.'},
- lm_basile:{c:'Moscou',iso:'RU',fit:[80,47,80],name:'Cathédrale Saint-Basile',desc:'Ses bulbes colorés sur la place Rouge sont uniques au monde.'},
- lm_templeciel:{c:'Pékin',iso:'CN',fit:[90,38,90],name:'Le Temple du Ciel',desc:'Le temple circulaire où les empereurs priaient pour les récoltes.'},
- lm_opera:{c:'Sydney',iso:'AU',fit:[185,65,120],name:'L’Opéra de Sydney',desc:'Ses voiles blanches au bord de la baie sont célèbres dans le monde entier.'},
- lm_theatre:{c:'Lagos',iso:'NG',fit:[120,31,120],name:'Théâtre national de Lagos',desc:'Le grand théâtre en forme de casquette militaire, symbole de Lagos.'},
- lm_mosquee:{c:'Abuja',iso:'NG',fit:[120,70,120],name:'Mosquée nationale d’Abuja',desc:'La grande mosquée au dôme doré et à quatre minarets.'},
- lm_gateway:{c:'Bombay',iso:'IN',fit:[40,26,30],name:'Gateway of India',desc:'La grande arche de basalte face à la mer d’Arabie.'},
- lm_sophie:{c:'Istanbul',iso:'TR',fit:[100,55,100],name:'Sainte-Sophie',desc:'Basilique puis mosquée, chef-d’œuvre byzantin de 1 500 ans.'},
- lm_parthenon:{c:'Athènes',iso:'GR',fit:[75,14,35],name:'Le Parthénon',desc:'Le temple d’Athéna sur l’Acropole.'},
- lm_brandebourg:{c:'Berlin',iso:'DE',fit:[65,26,14],name:'Porte de Brandebourg',desc:'La porte néoclassique, symbole de la réunification allemande.'},
- lm_renaissance:{c:'Dakar',iso:'SN',fit:[60,52,60],name:'Monument de la Renaissance africaine',desc:'La statue en bronze de 52 m sur la colline de Ouakam.'}};
+ lm_bigben:{c:'Londres',iso:'GB',fit:[60,96,60],name:'Big Ben et le palais de Westminster',desc:'La tour de l’horloge la plus célèbre du monde, au bord de la Tamise.',ll:[51.5007,-0.1246]},
+ lm_colisee:{c:'Rome',iso:'IT',fit:[190,48,160],name:'Le Colisée',desc:'Le plus grand amphithéâtre romain, vieux de près de 2 000 ans.',ll:[41.8902,12.4922]},
+ lm_pyramide:{c:'Le Caire',iso:'EG',fit:[230,139,230],name:'La Grande Pyramide',desc:'La dernière des sept merveilles du monde antique encore debout.',ll:[29.9792,31.1342]},
+ lm_burj:{c:'Dubaï',iso:'AE',fit:[110,828,110],name:'Burj Khalifa',desc:'La plus haute tour du monde : 828 mètres.',ll:[25.1972,55.2744]},
+ lm_christ:{c:'Rio de Janeiro',iso:'BR',fit:[40,38,40],name:'Le Christ Rédempteur',desc:'La statue géante qui domine Rio, bras ouverts.',ll:[-22.9519,-43.2105]},
+ lm_basile:{c:'Moscou',iso:'RU',fit:[80,47,80],name:'Cathédrale Saint-Basile',desc:'Ses bulbes colorés sur la place Rouge sont uniques au monde.',ll:[55.7525,37.6231]},
+ lm_templeciel:{c:'Pékin',iso:'CN',fit:[90,38,90],name:'Le Temple du Ciel',desc:'Le temple circulaire où les empereurs priaient pour les récoltes.',ll:[39.8822,116.4066]},
+ lm_opera:{c:'Sydney',iso:'AU',fit:[185,65,120],name:'L’Opéra de Sydney',desc:'Ses voiles blanches au bord de la baie sont célèbres dans le monde entier.',ll:[-33.8568,151.2153]},
+ lm_theatre:{c:'Lagos',iso:'NG',fit:[120,31,120],name:'Théâtre national de Lagos',desc:'Le grand théâtre en forme de casquette militaire, symbole de Lagos.',ll:[6.4747,3.3682]},
+ lm_mosquee:{c:'Abuja',iso:'NG',fit:[120,70,120],name:'Mosquée nationale d’Abuja',desc:'La grande mosquée au dôme doré et à quatre minarets.',ll:[9.0589,7.4896]},
+ lm_gateway:{c:'Bombay',iso:'IN',fit:[40,26,30],name:'Gateway of India',desc:'La grande arche de basalte face à la mer d’Arabie.',ll:[18.922,72.8347]},
+ lm_sophie:{c:'Istanbul',iso:'TR',fit:[100,55,100],name:'Sainte-Sophie',desc:'Basilique puis mosquée, chef-d’œuvre byzantin de 1 500 ans.',ll:[41.0086,28.9802]},
+ lm_parthenon:{c:'Athènes',iso:'GR',fit:[75,14,35],name:'Le Parthénon',desc:'Le temple d’Athéna sur l’Acropole.',ll:[37.9715,23.7267]},
+ lm_brandebourg:{c:'Berlin',iso:'DE',fit:[65,26,14],name:'Porte de Brandebourg',desc:'La porte néoclassique, symbole de la réunification allemande.',ll:[52.5163,13.3777]},
+ lm_renaissance:{c:'Dakar',iso:'SN',fit:[60,52,60],name:'Monument de la Renaissance africaine',desc:'La statue en bronze de 52 m sur la colline de Ouakam.',ll:[14.7222,-17.495]}};
 for(const k in LM2)LM_CITY[k]='-';
 const W_WN={Nile:'Nil',Thames:'Tamise',Rhine:'Rhin',Tiber:'Tibre',Danube:'Danube',Seine:'Seine',Volga:'Volga',Moskva:'Moskova',Congo:'Congo',Niger:'Niger',Ganges:'Gange',Yangtze:'Yangzi Jiang',Mississippi:'Mississippi',Amazon:'Amazone'};
 let W_FARE=1,wMode='';
@@ -5351,10 +5405,15 @@ function wEnv(R,g,B){const E=Object.assign({},B.env);const big=R.pop>3e6;
   if(R.iso==='NG')R.cars=['#f2c318','#f2c318','#e9e6df','#2a2d33','#b8bcc0','#1f3c6b','#8a1f1f'];
   return id}}
 // emplacements : monument, aéroport, gare (jamais du côté de l'eau)
-{const _ls=lmSpots;lmSpots=function(){if(!REGION.world)return _ls();const T2=TOTAL/2,g=REGION.geo||{},ws=REGION.env.water==='none'?'':REGION.env.side;
+{const _ls=lmSpots;lmSpots=function(){
+  // monument mondial à sa vraie position (ex. les pyramides à Gizeh, à 13 km du centre du Caire), s'il est à moins de 6 km
+  const real=()=>{let best=null,bd=6000;for(const k in LM2){const L=LM2[k];if(!L.ll)continue;const [x,z]=geoToLocal(L.ll[0],L.ll[1]),d=Math.hypot(x,z);if(d<bd||(k===REGION.lm2&&d<6000&&(!best||best.id!==REGION.lm2))){bd=d;best={id:k,x,z,d}}}
+    if(!best)return null;const f=LM2[best.id].fit,rad=Math.max(f[0],f[2])/2+10;if(!REGION.noQuarter&&best.d<TOTAL/2+rad+20)return null;return {k:'m2',id:best.id,rad,x:best.x,z:best.z,side:'+x'}};
+  if(REGION.noQuarter){const r=real();return r?[r]:[]}
+  if(!REGION.world)return _ls();const T2=TOTAL/2,g=REGION.geo||{},ws=REGION.env.water==='none'?'':REGION.env.side;
   const sides=['-x','+x','-z','+z'].filter(s=>s!==ws),out=[];
   const at=(s,d)=>{const sg=s[0]==='+'?1:-1;return s[1]==='x'?{x:sg*d,z:sPos(3),side:s}:{x:sPos(3),z:sg*d,side:s}};
-  if(REGION.lm2){const f=LM2[REGION.lm2].fit;out.push(Object.assign({k:'m2',rad:Math.max(f[0],f[2])/2+10},at(sides.shift(),T2+Math.max(f[0],f[2])/2+24)))}
+  const rr=real();if(rr&&rr.id!==REGION.lm2)out.push(rr);if(REGION.lm2){const f=LM2[REGION.lm2].fit,r=rr&&rr.id===REGION.lm2?rr:null;out.push(r||Object.assign({k:'m2',rad:Math.max(f[0],f[2])/2+10},at(sides.shift(),T2+Math.max(f[0],f[2])/2+24)))}
   if(g.a)out.push(Object.assign({k:'airport',rad:200},at(sides.shift(),T2+215)));
   if(g.st&&sides.length)out.push(Object.assign({k:'gare',rad:85},at(sides.shift(),T2+60)));
   return out}}
@@ -5371,13 +5430,58 @@ window.__spots=()=>lmSpots();window.__reg=()=>REGION;
 
 /* ================= Données OpenStreetMap des villes ================= */
 let OSMD=null,OSM_IDX=null;const OSMC={};
-const osmKey=R=>R.world?wNorm(R.city).replace(/[^a-z0-9]+/g,'_')+'_'+R.iso.toLowerCase():R.id;
+const osmKey=R=>R.okey?R.okey:R.world?wNorm(R.city).replace(/[^a-z0-9]+/g,'_')+'_'+R.iso.toLowerCase():R.id;
 // cache local des plans générés dans le navigateur (IndexedDB) : une ville générée une fois se recharge instantanément
 const osmIDB=(()=>{let P=null;const db=()=>P||(P=new Promise((ok,ko)=>{try{const q=indexedDB.open('mv-osm',1);q.onupgradeneeded=()=>q.result.createObjectStore('plans');q.onsuccess=()=>ok(q.result);q.onerror=()=>ko(q.error)}catch(e){ko(e)}}));
   const tx=(m,f)=>db().then(d=>new Promise((ok,ko)=>{const t=d.transaction('plans',m),r=f(t.objectStore('plans'));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>ko(t.error)}));
   return {get:k=>tx('readonly',s=>s.get(k)).catch(()=>null),set:(k,v)=>tx('readwrite',s=>s.put(v,k)).catch(()=>null)}})();
 const OSM_FMT=2;
-async function osmEnsure(R){OSMD=null;try{
+/* ---- Relief réel de la Terre : altitudes « Terrarium » (données publiques sur AWS, sans clé) ----
+   Montagnes, collines, vallées, littoral : le sol, les rues, les bâtiments, la foule et le joueur suivent l'altitude réelle.
+   Le quartier jouable reste plat ; le relief reprend progressivement autour. */
+const TER={z:12,tiles:new Map(),h0:0,ok:false,mesh:null,at:null,ver:0};
+const TER_URL='https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+const terTX=lon=>(lon+180)/360*2**TER.z, terTY=lat=>{const r=lat*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**TER.z};
+function terLoad(x,y){const k=x+'/'+y;if(TER.tiles.has(k))return TER.tiles.get(k);
+  const p=(async()=>{const r=await fetch(TER_URL.replace('{z}',TER.z).replace('{x}',x).replace('{y}',y));if(!r.ok)throw new Error('HTTP '+r.status);
+    const bm=await createImageBitmap(await r.blob()),c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.drawImage(bm,0,0);const d=g.getImageData(0,0,256,256).data,h=new Float32Array(65536);
+    for(let i=0;i<65536;i++)h[i]=d[i*4]*256+d[i*4+1]+d[i*4+2]/256-32768;p.h=h;TER.ver++;return h})();
+  p.catch(()=>{TER.tiles.delete(k)});TER.tiles.set(k,p);return p}
+function terRaw(lat,lon){const X=terTX(lon)*256,Y=terTY(lat)*256,tx=Math.floor(X/256),ty=Math.floor(Y/256),t=TER.tiles.get(tx+'/'+ty);if(!t||!t.h)return null;
+  const fx=Math.min(254.999,Math.max(0,X-tx*256-0.5)),fy=Math.min(254.999,Math.max(0,Y-ty*256-0.5)),ix=Math.floor(fx),iy=Math.floor(fy),ax=fx-ix,ay=fy-iy,h=t.h,i=iy*256+ix;
+  return (h[i]*(1-ax)+h[i+1]*ax)*(1-ay)+(h[i+256]*(1-ax)+h[i+257]*ax)*ay}
+async function terEnsure(lat,lon,rKm,ms=7000){const dLat=rKm/110.54,dLon=rKm/(111.32*Math.cos(lat*Math.PI/180)),jobs=[];
+  for(let x=Math.floor(terTX(lon-dLon));x<=Math.floor(terTX(lon+dLon));x++)for(let y=Math.floor(terTY(lat+dLat));y<=Math.floor(terTY(lat-dLat));y++)jobs.push(terLoad(x,y).catch(()=>null));
+  await Promise.race([Promise.all(jobs),new Promise(r=>setTimeout(r,ms))])}
+async function terPrepare(R){if((window.MV_CONFIG||{}).terrain===false){TER.ok=false;return}
+  try{await terEnsure(R.lat,R.lon,5);const h=terRaw(R.lat,R.lon);TER.ok=h!=null;TER.h0=h==null?0:Math.max(0,h)}catch(e){TER.ok=false}}
+const terSmooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+// hauteur locale (m) au point (x,z) du monde, 0 dans le quartier, relief réel autour
+function terY(x,z){if(!TER.ok||inside)return 0;const [lat,lon]=localToGeo(x,z),h=terRaw(lat,lon);if(h==null)return 0;
+  // plat sur le sol du quartier (520 m), puis le relief réel revient sur 350 m
+  const q=REGION.noQuarter?40:TOTAL/2+352;let f=terSmooth(q,q+350,Math.max(Math.abs(x),Math.abs(z)));if(f<=0)return 0;
+  if(TER.lmR!==REGION){TER.lmR=REGION;try{TER.lmf=lmSpots().filter(s=>s.k==='m2'&&s.x!=null)}catch(e){TER.lmf=[]}}for(const s of TER.lmf){f=Math.min(f,terSmooth(s.rad+20,s.rad+260,Math.hypot(x-s.x,z-s.z)));if(f<=0)return 0}
+  const rel=h<=0?-TER.h0-2.5:h-TER.h0;return rel*f}
+// maillage du sol réel (8 km autour du joueur) coloré selon le climat, l'altitude et la pente
+function terMesh(){if(!TER.ok||!world)return;const P=dolly.position;
+  if(TER.mesh&&TER.mesh.parent===world&&TER.at&&Math.hypot(TER.at[0]-P.x,TER.at[1]-P.z)<1500&&TER.at[2]===TER.ver)return;
+  const N0=160,S=8000,cx=Math.round(P.x/50)*50,cz=Math.round(P.z/50)*50,g=new THREE.PlaneGeometry(S,S,N0,N0);g.rotateX(-Math.PI/2);
+  const pos=g.attributes.position,col=new Float32Array(pos.count*3),c=new THREE.Color(),iso=REGION.iso||({cotonou:'BJ',paris:'FR',newyork:'US',tokyo:'JP'})[REGION.id]||'';
+  const desert=W_DESERT.has(iso),alat=Math.abs(REGION.lat),base=desert?'#cdb07a':alat<15?'#5f7f36':alat<35?'#7d8f4a':alat<55?'#6f8f4f':'#7f8f72';
+  const raw=new Float32Array(pos.count);
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)+cz,[la,lo]=localToGeo(x,z),h=terRaw(la,lo);raw[i]=h==null?TER.h0:h;pos.setY(i,terY(x,z)-0.05);pos.setX(i,x);pos.setZ(i,z)}
+  for(let i=0;i<pos.count;i++){const h=raw[i],ix=i%(N0+1),nb=ix<N0?raw[i+1]:raw[i-1],slope=Math.abs(nb-h)/50;
+    c.set(h<=0?'#c9b98f':base);
+    if(h>1800&&!desert)c.lerp(new THREE.Color('#7d7468'),Math.min(1,(h-1800)/900));
+    if(slope>0.45)c.lerp(new THREE.Color(desert?'#a07c52':'#6e665c'),Math.min(1,(slope-0.45)*2));
+    if(h>3600||(alat>60&&h>900))c.lerp(new THREE.Color('#f2f4f6'),Math.min(1,(h-(alat>60?900:3600))/400));
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b}
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));g.computeVertexNormals();
+  if(!TER.mat)TER.mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0});
+  if(TER.mesh){TER.mesh.parent&&TER.mesh.parent.remove(TER.mesh);TER.mesh.geometry.dispose()}
+  TER.mesh=new THREE.Mesh(g,TER.mat);TER.mesh.receiveShadow=true;TER.mesh.userData.ownGeo=true;world.add(TER.mesh);TER.at=[P.x,P.z,TER.ver];
+  for(const m of (world.userData.far||[]))m.visible=false}
+async function osmEnsure(R){OSMD=null;await terPrepare(R);try{
   if(!OSM_IDX)OSM_IDX=await fetch('models/osm/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
   const C=window.MV_CONFIG||{},k=osmKey(R),SRV=(C.osmServer||'').replace(/\/+$/,''),live=C.osmBrowser!==false;
   if(!OSM_IDX[k]&&!SRV&&!live)return;
@@ -5457,7 +5561,7 @@ function osmMall(d){const P=d.poi,R=mulberry32(osmH(d.seed,77)),list=[];
 const TILE=600;let TILES={},TGEN=0,TILEV=0,tileBusy=false;const tileFail={};
 function osmSets(){const a=OSMD?[OSMD]:[];for(const k in TILES)if(TILES[k].data)a.push(TILES[k].data);return a}
 function farGround(){const big=30000,mat=REGION.base==='cotonou'?GROUND_MAT:ASPH_MAT,m2=mat.clone();m2.map=mat.map.clone();m2.map.needsUpdate=true;m2.map.repeat.set(big/(REGION.base==='cotonou'?9:6),big/(REGION.base==='cotonou'?9:6));
-  const E=REGION.env,add=(x0,x1,z0,z1)=>{if(x1<=x0||z1<=z0)return;const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,m2);m.position.set((x0+x1)/2,-0.04,(z0+z1)/2);m.receiveShadow=true;m.userData.own=true;world.add(m)};
+  const E=REGION.env,add=(x0,x1,z0,z1)=>{if(x1<=x0||z1<=z0)return;const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,m2);m.position.set((x0+x1)/2,-0.04,(z0+z1)/2);m.receiveShadow=true;m.userData.own=true;world.add(m);(world.userData.far=world.userData.far||[]).push(m)};
   const H=big/2;if(!ENV||E.water==='none'){add(-H,H,-H,H);return}
   const e=ENV.edge,sg=ENV.sg,far=ENV.kind==='ocean'?null:e+sg*ENV.width;
   if(ENV.ax==='z'){if(sg>0){add(-H,H,-H,e);if(far!=null)add(-H,H,far,H)}else{add(-H,H,e,H);if(far!=null)add(-H,H,-H,far)}}
@@ -5476,9 +5580,10 @@ async function tilesTick(){if(!OSMD||inside||tileBusy||!world)return;const C=win
   try{let data=(await osmIDB.get(ik));data=data&&data.fmt===OSM_FMT?data.data:null;
     if(!data){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),C.osmTimeout||90000);
       try{if(bd<60)toast('Chargement de la suite de la ville…');
-        if(C.osmServer){const r=await fetch(C.osmServer.replace(/\/+$/,'')+'/tile/'+city+'/'+best.key.replace(',','_')+'.json?lat='+(OSMD.lat??REGION.lat)+'&lon='+(OSMD.lon??REGION.lon),{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);data=await r.json()}
-        else{const L=await import(new URL('lib/osm-lib.mjs',location.href).href);data=await L.buildTile({key:best.key,lat:OSMD.lat??REGION.lat,lon:OSMD.lon??REGION.lon,x0:best.x0,x1:best.x1,z0:best.z0,z1:best.z1,skipR:R0,signal:ac.signal})}}
+        if(C.osmServer){const r=await fetch(C.osmServer.replace(/\/+$/,'')+'/tile/'+city+'/'+best.key.replace(',','_')+'.json?lat='+REGION.lat+'&lon='+REGION.lon,{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);data=await r.json()}
+        else{const L=await import(new URL('lib/osm-lib.mjs',location.href).href);data=await L.buildTile({key:best.key,lat:REGION.lat,lon:REGION.lon,x0:best.x0,x1:best.x1,z0:best.z0,z1:best.z1,skipR:R0,signal:ac.signal})}}
       finally{clearTimeout(to)}osmIDB.set(ik,{fmt:OSM_FMT,t:Date.now(),data})}
+    if(TER.ok){const [la,lo]=localToGeo((best.x0+best.x1)/2,(best.z0+best.z1)/2);await terEnsure(la,lo,1,4000)}
     if(gen!==TGEN)return;const grp=tileBuild(data);TILES[best.key]={data,grp};TILEV++;if(mapOpen)MV.key=''}
   catch(e){console.warn('Tuile OSM indisponible',best.key,e);if(gen===TGEN){delete TILES[best.key];tileFail[best.key]=Date.now()+45000}}
   finally{tileBusy=false}}
@@ -5488,7 +5593,7 @@ const CROWD={peds:[],cars:[],roads:null,v:-1,m:null,greet:0};
 const LHT=new Set(['GB','IE','JP','IN','PK','BD','LK','NP','TH','MY','SG','ID','AU','NZ','ZA','KE','UG','TZ','ZM','ZW','MW','MZ','BW','NA','SZ','LS','JM','TT','BS','BB','HK','MO','CY','MT','MU','SC','BN','BT','FJ','PG','GY','SR']);
 const CR={cell:8,big:50,R:230,Rdel:270};
 const lhtNow=()=>LHT.has(REGION.iso||({tokyo:'JP'})[REGION.id]||'');
-function crowdRoads(){if(CROWD.roads&&CROWD.v===TILEV)return CROWD.roads;const roads=[],VG=new Map(),BG=new Map(),q=TOTAL/2+6;
+function crowdRoads(){if(CROWD.roads&&CROWD.v===TILEV)return CROWD.roads;const roads=[],VG=new Map(),BG=new Map(),q=qHalf();
   const key=(x,z,c)=>Math.floor(x/c)*100003+Math.floor(z/c),push=(M,k,v)=>{let a=M.get(k);if(!a)M.set(k,a=[]);a.push(v)};
   for(const O of osmSets())for(const [cls,wd,ni,surf,pts] of O.r){if(cls>7||pts.length<2)continue;const L=[0];for(let i=1;i<pts.length;i++)L.push(L[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));if(L.at(-1)<6)continue;
     const ri=roads.length;roads.push({p:pts,L,cls,w:Math.max(2,wd),car:cls<=4});
@@ -5498,10 +5603,11 @@ function crowdMeshes(){if(CROWD.m)return CROWD.m;const NP=96,NC=40,NM=40;
   const mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.8});
   const leg=new THREE.BoxGeometry(0.15,0.82,0.17);leg.translate(0,-0.41,0);const arm=new THREE.BoxGeometry(0.1,0.62,0.11);arm.translate(0,-0.31,0);
   const torso=new THREE.BoxGeometry(0.44,0.6,0.25);torso.translate(0,0.3,0);const head=new THREE.SphereGeometry(0.125,10,8);
-  const mk=(g,n,m)=>{const im=new THREE.InstancedMesh(g,m||mat,n);im.count=0;im.frustumCulled=false;im.castShadow=HIGH;npcRoot.add(im);return im};
-  CROWD.m={legL:mk(leg,NP),legR:mk(leg,NP),armL:mk(arm,NP),armR:mk(arm,NP),torso:mk(torso,NP),head:mk(head,NP),car:mk(CAR_GEO,NC,MAT.atlasInst),moto:mk(MOTO_GEO,NM,MAT.atlas),NP,NC,NM};return CROWD.m}
+  // couleurs par instance créées dès le départ : un matériau partagé (atlasInst) doit toujours voir instanceColor
+  const mk=(g,n,m,noCol)=>{const im=new THREE.InstancedMesh(g,m||mat,n);if(!noCol)im.setColorAt(0,new THREE.Color(1,1,1));im.count=0;im.frustumCulled=false;im.castShadow=HIGH;npcRoot.add(im);return im};
+  CROWD.m={legL:mk(leg,NP),legR:mk(leg,NP),armL:mk(arm,NP),armR:mk(arm,NP),torso:mk(torso,NP),head:mk(head,NP),car:mk(CAR_GEO,NC,MAT.atlasInst),moto:mk(MOTO_GEO,NM,MAT.atlas,true),NP,NC,NM};return CROWD.m}
 const crowdWet=(x,z)=>{if(!ENV||ENV.kind==='none')return false;const o=((ENV.ax==='z'?z:x)-ENV.edge)*ENV.sg;return ENV.kind==='ocean'?o>-4:(o>-4&&o<ENV.width+12)};
-const crowdInQ=(x,z)=>{const q=TOTAL/2+6;return Math.abs(x)<q&&Math.abs(z)<q};
+const crowdInQ=(x,z)=>{const q=qHalf();return Math.abs(x)<q&&Math.abs(z)<q};
 // position sur une rue : point le long du segment + décalage latéral (voie ou trottoir)
 function crowdPos(a,R0){const r=R0.roads[a.ri],i=a.i,j=i+a.dir,p=r.p[i],q=r.p[j],L=Math.hypot(q[0]-p[0],q[1]-p[1])||1,fx=(q[0]-p[0])/L,fz=(q[1]-p[1])/L,t=Math.min(a.t,L);
   a.x=p[0]+fx*t+(-fz)*a.off;a.z=p[1]+fz*t+fx*a.off;a.fx=fx;a.fz=fz;a.L=L}
@@ -5543,17 +5649,45 @@ function crowdTick(dt){
   // rendu instancié
   let ip=0,ic=0,im=0;const col=new THREE.Color();
   const body=(x,z,ang,ph,c,seated)=>{if(ip>=m.NP)return;const ca=Math.cos(ang),sa=Math.sin(ang),sw=seated?0:Math.sin(ph)*0.5,hip=seated?0.95:0.86,yb=seated?0.55:0;
-    const part=(mesh,ox,oy,rx,color)=>{_co.position.set(x+ca*ox,oy,z-sa*ox);_co.rotation.set(rx,ang,0,'YXZ');_co.scale.set(1,1,1);_co.updateMatrix();mesh.setMatrixAt(ip,_co.matrix);mesh.setColorAt(ip,col.set(color))};
+    const gy=terY(x,z),part=(mesh,ox,oy,rx,color)=>{_co.position.set(x+ca*ox,oy+gy,z-sa*ox);_co.rotation.set(rx,ang,0,'YXZ');_co.scale.set(1,1,1);_co.updateMatrix();mesh.setMatrixAt(ip,_co.matrix);mesh.setColorAt(ip,col.set(color))};
     part(m.legL,-0.11,hip,seated?-1.3:sw,c.bot);part(m.legR,0.11,hip,seated?-1.3:-sw,c.bot);part(m.torso,0,hip-0.02+yb*0.02,0,c.top);
     part(m.armL,-0.29,hip+0.56,seated?-0.9:-sw*0.8,c.top);part(m.armR,0.29,hip+0.56,seated?-0.9:sw*0.8,c.top);part(m.head,0,hip+0.73,0,c.skin);ip++};
   for(const a of CROWD.peds){const ang=Math.atan2(a.fx*a.dir,a.fz*a.dir);body(a.x,a.z,ang,a.ph,a.c,false)}
-  for(const c of CROWD.cars){_co.position.set(c.x,0,c.z);_co.rotation.set(0,c.ang,0);_co.scale.setScalar(1);_co.updateMatrix();
+  for(const c of CROWD.cars){_co.position.set(c.x,terY(c.x,c.z),c.z);_co.rotation.set(0,c.ang,0);_co.scale.setScalar(1);_co.updateMatrix();
     if(c.moto){if(im>=m.NM)continue;m.moto.setMatrixAt(im++,_co.matrix);body(c.x-Math.sin(c.ang)*0.15,c.z-Math.cos(c.ang)*0.15,c.ang,0,c.c,true)}
     else{if(ic>=m.NC)continue;m.car.setMatrixAt(ic,_co.matrix);m.car.setColorAt(ic,col.set(c.col).convertSRGBToLinear());ic++}}
   for(const k of ['legL','legR','armL','armR','torso','head']){const mm=m[k];mm.count=ip;mm.instanceMatrix.needsUpdate=true;if(mm.instanceColor)mm.instanceColor.needsUpdate=true}
   m.car.count=ic;m.car.instanceMatrix.needsUpdate=true;if(m.car.instanceColor)m.car.instanceColor.needsUpdate=true;m.moto.count=im;m.moto.instanceMatrix.needsUpdate=true}
 function crowdNearest(){const P=dolly.position;let best=null,bd=2.2;for(const a of CROWD.peds){const d=Math.hypot(a.x-P.x,a.z-P.z);if(d<bd){bd=d;best=a}}return best?{a:best,d:bd}:null}
-window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,tp:(x,z)=>{if(!inside)dolly.position.set(x,0,z)}});
+/* ---- La Terre entière en continu : on peut marcher ou rouler de ville en ville et de pays en pays.
+   Le jeu garde des coordonnées locales précises en « recentrant » le monde quand on s'éloigne : près d'une ville, on entre
+   dans cette ville (avec son quartier) ; ailleurs, une région de passage sans quartier (route, campagne, désert…). ---- */
+let KEEP_DRIVE=false,rebasing=false,geoT=0,curIso=null;
+const REBASE_D=2500;
+function countryAt(lat,lon){if(!WORLD)return null;const inPoly=(poly)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,yi]=poly[i],[xj,yj]=poly[j];if(((yi>lat)!==(yj>lat))&&lon<(xj-xi)*(lat-yi)/(yj-yi)+xi)c=!c}return c};
+  for(const iso in WORLD.countries){const P=WORLD.countries[iso].poly||[];for(const poly of P)if(inPoly(poly))return iso}return null}
+function nearestCity(lat,lon){if(!WORLD)return null;let best=null,bd=1e18;const kx=Math.cos(lat*Math.PI/180);const BASE={'Cotonou|BJ':'cotonou','Paris|FR':'paris','New York|US':'newyork','Tokyo|JP':'tokyo'};for(const c of WORLD.cities){const bb=REGIONS[BASE[c[0]+'|'+c[1]]],la=bb?bb.lat:c[2],lo=bb?bb.lon:c[3];const dx=(lo-lon)*kx,dy=la-lat,d=dx*dx+dy*dy;if(d<bd){bd=d;best=c}}return best?{c:best,km:Math.sqrt(bd)*111.2}:null}
+function regionForCity(c){const b=Object.values(REGIONS).find(r=>!r.world&&r.city===c[0]&&(({cotonou:'BJ',paris:'FR',newyork:'US',tokyo:'JP'})[r.id]===c[1]));return b?b.id:wRegister(c)}
+async function geoTick(){if(!GAME||!GAME.created||inside||rebasing||!(OSMD||REGION.noQuarter))return;const P=dolly.position;geoT++;
+  if(!WORLD){worldLoad().catch(()=>{});return}
+  const [lat,lon]=playerLatLon();
+  if(geoT%4===0){const iso=countryAt(lat,lon);if(iso&&curIso&&iso!==curIso){toast('Frontière franchie : bienvenue · '+wCountry(iso)+'.','good')}if(iso)curIso=iso}
+  if(Math.hypot(P.x,P.z)<REBASE_D)return;
+  // recentrage : ville proche (moins de 4 km de son centre) ou région de passage
+  const nc=nearestCity(lat,lon);if(!nc)return;rebasing=true;
+  try{let R;const near=nc.km<6;
+    if(near){const id=regionForCity(nc.c);R=REGIONS[id];if(R===REGION||(R.id===REGION.id&&!REGION.noQuarter)){rebasing=false;return}}
+    else{const id=regionForCity(nc.c),B=REGIONS[id];R=Object.assign({},B,{lat:+lat.toFixed(6),lon:+lon.toFixed(6),noQuarter:true,okey:'pt_'+lat.toFixed(3)+'_'+lon.toFixed(3),city:B.city,near:Math.round(nc.km),env:Object.assign({},B.env,{water:'none',cars:0})})}
+    const [nx,nz]=geoToLocal(lat,lon,R),h=drive?drive.h:null,keep=!!drive;
+    $('#loading-txt').textContent=near?'Vous arrivez à '+R.city+'…':'En route… ('+R.country+', à '+R.near+' km de '+R.city+')';$('#loading').hidden=false;
+    setTimeout(async()=>{KEEP_DRIVE=keep;if(mission){mission=null;updateTracker()}navTarget=null;offers=null;
+      REGION=R;refreshOffset();await osmEnsure(REGION);newQuarter(citySeed[REGION.id]||1);KEEP_DRIVE=false;$('#loading').hidden=true;
+      if(keep&&drive){drive.x=nx;drive.z=nz;drive.h=h;drive.lost=true;driveSync()}else dolly.position.set(nx,0,nz);
+      $('#place').textContent=REGION.country+' · '+(REGION.noQuarter?'à '+R.near+' km de '+REGION.city:REGION.city);
+      if(near){toast('Vous arrivez à '+REGION.city+'.','good');if(GAME&&!GAME.visited[REGION.id]){GAME.visited[REGION.id]=true;saveGame()}}
+      rebasing=false},60)}
+  catch(e){console.warn('Recentrage impossible',e);rebasing=false;$('#loading').hidden=true}}
+window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,lm:()=>Object.keys(LMVIS).map(k=>[k,LMVIS[k].inst?Object.keys(LMVIS[k].inst):null,LMVIS[k].models.map(d=>d.id+'@'+Math.round(d.x)+','+Math.round(d.z))]),noon:()=>{simTime+=((12-((simTime/3600000+tzOff)%24))+24)%24*3600000},geo:()=>{const ll=playerLatLon();return{ll,R:[REGION.lat,REGION.lon,REGION.id,!!REGION.noQuarter],nc:nearestCity(ll[0],ll[1]),rebasing,pos:[dolly.position.x,dolly.position.z],world:!!WORLD,iso:curIso,osm:OSMD?(OSMD.b||[]).length:null,key:osmKey(REGION)}},tp:(x,z,yw)=>{if(!inside)dolly.position.set(x,0,z);if(yw!=null){yaw=yw;pitch=0.05}}});
 
 async function boot(){
   try{

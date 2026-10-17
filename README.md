@@ -2,7 +2,7 @@
 
 Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotonou, Paris, New York, Tokyo et plus de 7 200 villes du monde. Three.js (r128), sans build : un seul `index.html` et des ressources statiques.
 
-- `index.html` : le jeu (v0.18 : commerces réels, centres commerciaux, carte zoomable)
+- `index.html` : le jeu (v0.24 : toute la Terre en continu, relief réel, monuments à leur vraie place, architecture de chaque pays)
 - `config.js` : configuration de déploiement (URL du serveur de cartes)
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
@@ -28,6 +28,13 @@ La sauvegarde est stockée dans le navigateur (`localStorage`).
 2. Dans le dépôt : **Settings › Pages › Build and deployment › Source : GitHub Actions**.
 3. Le workflow `.github/workflows/pages.yml` publie le site à chaque push sur `main` (ou à la main depuis l’onglet Actions).
 4. Optionnel : **Settings › Secrets and variables › Actions › Variables**, créer `OSM_SERVER_URL` avec l’adresse du serveur de cartes (ex. `https://monde-vivant-osm.up.railway.app`). Elle est injectée dans `config.js` au déploiement.
+
+## La Terre entière
+
+- **Voyage continu** : on peut marcher ou rouler hors de la ville, de pays en pays. Le monde se « recentre » tous les 2,5 km : près d’une ville (moins de 6 km), on entre dans cette ville avec son quartier ; ailleurs, une région de passage (campagne, désert, montagne) charge OpenStreetMap et le relief autour du joueur. Un message signale chaque frontière franchie.
+- **Relief réel** : altitudes des tuiles Terrarium (AWS Open Data, ~38 m par pixel au zoom 12). Montagnes, collines et vallées autour de la ville, sol coloré selon le climat (désert, savane, forêt, toundra), l’altitude et la pente, neige en haut des sommets. Le quartier de départ reste plat ; routes, bâtiments, passants et voitures suivent le terrain. `terrain:false` dans `config.js` le désactive.
+- **Monuments à leur vraie place** : pyramides de Gizeh, tour Eiffel, Christ Rédempteur, Temple du Ciel… apparaissent à leurs coordonnées réelles quand on passe à moins de 6 km.
+- **Architecture régionale** : façades, couleurs et toits selon la région du monde (maisons blanches à toits plats d’Afrique du Nord et du Moyen-Orient, tuiles méditerranéennes, barres soviétiques, couleurs vives d’Amérique latine, Inde, Chine, Asie du Sud-Est, toits à deux pentes en tôle, tuile ou ardoise…), pour les plans OpenStreetMap comme pour le quartier de départ.
 
 ## Plans OpenStreetMap
 
