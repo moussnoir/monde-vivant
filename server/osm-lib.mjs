@@ -22,6 +22,19 @@ export const cityKey = (name, iso) => wNorm(name).replace(/[^a-z0-9]+/g, '_') + 
 const r1 = v => Math.round(v * 10) / 10;
 const r3 = v => Math.round(v * 1000) / 1000;
 
+// équipements repris dans le jeu (am) : centres commerciaux, commerces, services
+const AMENITIES = 'school|university|college|hospital|clinic|pharmacy|marketplace|place_of_worship|fuel|restaurant|fast_food|cafe|bar|bank|atm|post_office|police|cinema|theatre|townhall|bus_station|library';
+const SHOPS = 'mall|department_store|supermarket|convenience|bakery|butcher|clothes|shoes|hairdresser|beauty|electronics|mobile_phone|hardware|furniture|car|car_repair|tailor|books|jewelry|optician';
+// type de point d'intérêt -> catégorie du jeu
+export function poiType(t) {
+  if (t.shop === 'mall' || t.shop === 'department_store') return 'mall';
+  if (t.shop === 'supermarket') return 'supermarket';
+  if (t.shop) return 'shop:' + t.shop;
+  if (t.tourism) return t.tourism;
+  if (t.leisure) return t.leisure;
+  return t.amenity;
+}
+
 function query(lat, lon, R) {
   const RR = Math.round(R * 1.6); // les routes et voies ferrées débordent du quartier
   return `[out:json][timeout:180][maxsize:536870912];
@@ -44,7 +57,10 @@ out geom;
 );
 out geom;
 (
-  nwr["amenity"~"^(school|hospital|marketplace|place_of_worship|fuel)$"](around:${R},${lat},${lon});
+  nwr["amenity"~"^(${AMENITIES})$"](around:${R},${lat},${lon});
+  nwr["shop"~"^(${SHOPS})$"](around:${R},${lat},${lon});
+  nwr["tourism"~"^(hotel|museum|attraction)$"](around:${R},${lat},${lon});
+  nwr["leisure"~"^(stadium|sports_centre)$"](around:${R},${lat},${lon});
 );
 out center tags;`;
 }
@@ -99,7 +115,7 @@ function obb(pts) {
 // ---------- classification ----------
 function buildingKind(t) {
   const b = t.building || 'yes';
-  if (t.shop || /^(commercial|retail|supermarket|kiosk|shop|mall|hotel)$/.test(b)) return 3;
+  if (t.shop || t.amenity === 'marketplace' || /^(commercial|retail|supermarket|kiosk|shop|mall|hotel|department_store)$/.test(b)) return 3;
   if (/^(apartments|residential|dormitory|flats)$/.test(b)) return 2;
   if (/^(house|detached|semidetached_house|terrace|bungalow|villa|farm)$/.test(b)) return 1;
   if (/^(office|bank)$/.test(b)) return 4;
@@ -171,7 +187,10 @@ export function convert(osm, { key, lat, lon, R }) {
         let { w, d, a } = o; if (d > w) { [w, d] = [d, w]; a += Math.PI / 2; }
         a = Math.atan2(Math.sin(a), Math.cos(a));
         const fill = Math.min(1, area(ring) / (w * d));
-        out.b.push([r1(o.cx), r1(o.cz), r1(w), r1(d), r3(a), buildingHeight(t), buildingKind(t), Math.round(fill * 100) / 100, t['building:colour'] || '']);
+        const row = [r1(o.cx), r1(o.cz), r1(w), r1(d), r3(a), buildingHeight(t), buildingKind(t), Math.round(fill * 100) / 100, t['building:colour'] || ''];
+        if (t.name) row.push(t.name);
+        out.b.push(row);
+        if ((t.amenity || t.shop || t.tourism) && !t._poi) { t._poi = 1; out.am.push([poiType(t), t.name || t.brand || '', Math.round(o.cx), Math.round(o.cz), t['addr:street'] ? ((t['addr:housenumber'] || '') + ' ' + t['addr:street']).trim() : '']); }
       }
       continue;
     }
@@ -187,10 +206,10 @@ export function convert(osm, { key, lat, lon, R }) {
     if (t.natural === 'water' || t.waterway === 'riverbank') { for (const ring of ringsOf(el, P)) if (closed(ring)) out.w.push(rnd(simplifyRing(ring, 1))); continue; }
     const green = t.leisure || (t.landuse && t.landuse) || (t.natural === 'wood' ? 'forest' : null);
     if (green && el.type !== 'node' && !t.amenity) { for (const ring of ringsOf(el, P)) if (closed(ring)) out.p.push([green, rnd(simplifyRing(ring, 0.8))]); continue; }
-    if (t.amenity) {
-      const g = el.type === 'node' ? el : el.center; if (!g) continue;
+    if (t.amenity || t.shop || t.tourism || (t.leisure && /^(stadium|sports_centre)$/.test(t.leisure))) {
+      const g = el.type === 'node' ? el : (el.center || (el.geometry && el.geometry[0])); if (!g) continue;
       const [x, z] = P(g.lat, g.lon); if (Math.hypot(x, z) > R * 1.05) continue;
-      out.am.push([t.amenity, t.name || '', Math.round(x), Math.round(z), '']);
+      out.am.push([poiType(t), t.name || t.brand || '', Math.round(x), Math.round(z), t['addr:street'] ? ((t['addr:housenumber'] || '') + ' ' + t['addr:street']).trim() : '']);
     }
   }
   return out;

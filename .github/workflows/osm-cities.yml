@@ -2,6 +2,8 @@ name: Générer des plans OpenStreetMap
 
 # Lancement manuel : Actions > « Générer des plans OpenStreetMap » > Run workflow
 on:
+  schedule:
+    - cron: '17 2 * * *'   # chaque nuit : 1re fois mise à jour des plans existants, puis les plus grandes villes manquantes
   workflow_dispatch:
     inputs:
       cities:
@@ -16,6 +18,10 @@ on:
         description: 'Ou les N plus grandes villes pas encore générées'
         required: false
         default: ''
+      refresh:
+        description: 'Régénérer les plans existants (commerces, noms)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -23,7 +29,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 345
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,14 +40,21 @@ jobs:
           CITIES: ${{ github.event.inputs.cities }}
           COUNTRY: ${{ github.event.inputs.country }}
           TOP: ${{ github.event.inputs.top }}
+          REFRESH: ${{ github.event.inputs.refresh }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -f
-          ARGS=()
+          ARGS=(--max-minutes 320 --max-total-mb 700)
+          if [ "$EVENT" = "schedule" ]; then
+            if [ ! -f models/osm/.v2 ]; then ARGS+=(--refresh); touch models/osm/.v2; else ARGS+=(--top 400); fi
+          fi
+          [ "$REFRESH" = "true" ] && ARGS+=(--refresh)
           for c in $CITIES; do ARGS+=("$c"); done
           [ -n "$COUNTRY" ] && ARGS+=(--country "$COUNTRY")
           [ -n "$TOP" ] && ARGS+=(--top "$TOP")
           node tools/osm-build.mjs "${ARGS[@]}"
       - name: Committer les nouveaux plans
+        if: always()
         env:
           LABEL: ${{ github.event.inputs.cities }}${{ github.event.inputs.country }}${{ github.event.inputs.top }}
         run: |
@@ -49,5 +62,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add models/osm
           git diff --cached --quiet && echo "Aucun nouveau plan" && exit 0
-          git commit -m "Plans OSM : $LABEL"
-          git push
+          git commit -m "Plans OSM : ${LABEL:-mise à jour automatique}"
+          git pull --rebase -q && git push

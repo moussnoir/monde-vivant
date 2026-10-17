@@ -2,7 +2,7 @@
 
 Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotonou, Paris, New York, Tokyo et plus de 7 200 villes du monde. Three.js (r128), sans build : un seul `index.html` et des ressources statiques.
 
-- `index.html` : le jeu (v0.17)
+- `index.html` : le jeu (v0.18 : commerces réels, centres commerciaux, carte zoomable)
 - `config.js` : configuration de déploiement (URL du serveur de cartes)
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
@@ -34,12 +34,15 @@ Le jeu cherche d’abord `models/osm/<clé>.json` (clé = nom de ville normalis�
 - avec `osmServer` renseigné dans `config.js`, il demande le plan au serveur, qui le génère depuis Overpass (30 à 90 s la première fois, puis en cache) ;
 - sinon, ou en cas d’échec, il construit le quartier procédural habituel.
 
+Chaque nuit, le workflow « Générer des plans OpenStreetMap » complète le dépôt : la première nuit il met à jour les plans existants (ajout des commerces, centres commerciaux et noms de bâtiments, plus Tokyo), ensuite il ajoute les 400 plus grandes villes manquantes à chaque passage, dans la limite de 700 Mo.
+
 ### Option A : pré-générer dans le dépôt (gratuit, sans serveur)
 
 ```bash
 node tools/osm-build.mjs "Porto-Novo:BJ" "Parakou:BJ"   # villes de world.json
 node tools/osm-build.mjs --country BJ                     # tout un pays
 node tools/osm-build.mjs --top 50                         # les 50 plus grandes villes manquantes
+node tools/osm-build.mjs --refresh                        # régénère les plans existants
 node tools/osm-build.mjs --key ketou_bj --lat 7.36 --lon 2.60   # point libre (hors world.json)
 ```
 
