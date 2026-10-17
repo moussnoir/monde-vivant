@@ -393,7 +393,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.22 · Cartes rapides, sans saturation</div>
+    <div class="eyebrow">Version 0.23 · Passants et circulation dans toute la ville</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -3389,6 +3389,7 @@ function computeAction(){
   }else{
     const T=missionTarget(); if(T) consider(Math.hypot(P.x-T.x,P.z-T.z),2.4,{pri:6,label:T.label,fn:missionStep});
     for(const n of npcs) if(n.g.visible&&!n.inside) consider(Math.hypot(P.x-n.pos.x,P.z-n.pos.z),2.3,{pri:2,label:'Parler à '+first(n),fn:()=>openCard(n)});
+    {const cn=crowdNearest();if(cn)consider(cn.d,2.2,{pri:1,label:'Saluer ce passant',fn:()=>{const a=cn.a;a.v=0;setTimeout(()=>{a.v=mrr(1.1,1.6)},2500);toast('« '+mpick(REGION.greetNew||['Bonjour !'])+' »');if(Date.now()-CROWD.greet>30000){CROWD.greet=Date.now();needs({moral:2})}}})}
     for(const n of npcs) if(n.inside&&n.inside.walk&&Math.abs(n.inside.ly-P.y)<1.3) consider(Math.hypot(P.x-n.inside.x,P.z-n.inside.z),2.4,{pri:2,label:'Parler à '+first(n),fn:()=>openCard(n)});
     for(const d of openB){const S=d.open.spots;
       for(const sh of S.shops) if(sh.shop&&Math.abs(sh.counter.ly-P.y)<1.2) consider(Math.hypot(P.x-sh.counter.x,P.z-sh.counter.z),2.3,{pri:3,label:'Acheter · '+sh.shop.name,fn:()=>openShop(sh.shop.door)});
@@ -5094,7 +5095,7 @@ function loop(){
   {const P=dolly.position,mv=Math.hypot(P.x-lastPos.x,P.z-lastPos.z);lastPos.copy(P);updateAvatar(dt,mv)}
   tickNeeds(dt); updateBeacon(performance.now()/1000);
   saveT-=dt; if(saveT<=0){saveT=20;if(saveDirty){saveDirty=false;saveGame()}}
-  tickTraffic(dt); tickFauna(dt,performance.now()/1000);
+  tickTraffic(dt); crowdTick(dt); tickFauna(dt,performance.now()/1000);
   for(const f of envAnim) f(dt,performance.now()/1000);
   WATER.uniforms.time.value=performance.now()/1000;
   updateWalkIns(dt); tickWalkIns(dt); bldHint(); floorWatch();
@@ -5481,7 +5482,78 @@ async function tilesTick(){if(!OSMD||inside||tileBusy||!world)return;const C=win
     if(gen!==TGEN)return;const grp=tileBuild(data);TILES[best.key]={data,grp};TILEV++;if(mapOpen)MV.key=''}
   catch(e){console.warn('Tuile OSM indisponible',best.key,e);if(gen===TGEN){delete TILES[best.key];tileFail[best.key]=Date.now()+45000}}
   finally{tileBusy=false}}
-window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick});
+/* ---- Foule et circulation dans toute la ville réelle : passants sur les trottoirs, voitures et motos sur les vraies rues,
+   autour du joueur (rayon ~230 m), sur le plan de départ comme sur les tuiles du monde ouvert ---- */
+const CROWD={peds:[],cars:[],roads:null,v:-1,m:null,greet:0};
+const LHT=new Set(['GB','IE','JP','IN','PK','BD','LK','NP','TH','MY','SG','ID','AU','NZ','ZA','KE','UG','TZ','ZM','ZW','MW','MZ','BW','NA','SZ','LS','JM','TT','BS','BB','HK','MO','CY','MT','MU','SC','BN','BT','FJ','PG','GY','SR']);
+const CR={cell:8,big:50,R:230,Rdel:270};
+const lhtNow=()=>LHT.has(REGION.iso||({tokyo:'JP'})[REGION.id]||'');
+function crowdRoads(){if(CROWD.roads&&CROWD.v===TILEV)return CROWD.roads;const roads=[],VG=new Map(),BG=new Map(),q=TOTAL/2+6;
+  const key=(x,z,c)=>Math.floor(x/c)*100003+Math.floor(z/c),push=(M,k,v)=>{let a=M.get(k);if(!a)M.set(k,a=[]);a.push(v)};
+  for(const O of osmSets())for(const [cls,wd,ni,surf,pts] of O.r){if(cls>7||pts.length<2)continue;const L=[0];for(let i=1;i<pts.length;i++)L.push(L[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));if(L.at(-1)<6)continue;
+    const ri=roads.length;roads.push({p:pts,L,cls,w:Math.max(2,wd),car:cls<=4});
+    for(let i=0;i<pts.length;i++){const [x,z]=pts[i];if(i===0||i===pts.length-1)push(VG,key(x,z,CR.cell),[ri,i]);if(Math.abs(x)>q||Math.abs(z)>q)push(BG,key(x,z,CR.big),[ri,i])}}
+  CROWD.roads={roads,VG,BG,key};CROWD.v=TILEV;return CROWD.roads}
+function crowdMeshes(){if(CROWD.m)return CROWD.m;const NP=96,NC=40,NM=40;
+  const mat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.8});
+  const leg=new THREE.BoxGeometry(0.15,0.82,0.17);leg.translate(0,-0.41,0);const arm=new THREE.BoxGeometry(0.1,0.62,0.11);arm.translate(0,-0.31,0);
+  const torso=new THREE.BoxGeometry(0.44,0.6,0.25);torso.translate(0,0.3,0);const head=new THREE.SphereGeometry(0.125,10,8);
+  const mk=(g,n,m)=>{const im=new THREE.InstancedMesh(g,m||mat,n);im.count=0;im.frustumCulled=false;im.castShadow=HIGH;npcRoot.add(im);return im};
+  CROWD.m={legL:mk(leg,NP),legR:mk(leg,NP),armL:mk(arm,NP),armR:mk(arm,NP),torso:mk(torso,NP),head:mk(head,NP),car:mk(CAR_GEO,NC,MAT.atlasInst),moto:mk(MOTO_GEO,NM,MAT.atlas),NP,NC,NM};return CROWD.m}
+const crowdWet=(x,z)=>{if(!ENV||ENV.kind==='none')return false;const o=((ENV.ax==='z'?z:x)-ENV.edge)*ENV.sg;return ENV.kind==='ocean'?o>-4:(o>-4&&o<ENV.width+12)};
+const crowdInQ=(x,z)=>{const q=TOTAL/2+6;return Math.abs(x)<q&&Math.abs(z)<q};
+// position sur une rue : point le long du segment + décalage latéral (voie ou trottoir)
+function crowdPos(a,R0){const r=R0.roads[a.ri],i=a.i,j=i+a.dir,p=r.p[i],q=r.p[j],L=Math.hypot(q[0]-p[0],q[1]-p[1])||1,fx=(q[0]-p[0])/L,fz=(q[1]-p[1])/L,t=Math.min(a.t,L);
+  a.x=p[0]+fx*t+(-fz)*a.off;a.z=p[1]+fz*t+fx*a.off;a.fx=fx;a.fz=fz;a.L=L}
+function crowdSpawn(car,R0){const P=dolly.position;
+  for(let k=0;k<14;k++){const ang=Math.random()*Math.PI*2,d=mrr(car?70:45,CR.R),x=P.x+Math.cos(ang)*d,z=P.z+Math.sin(ang)*d,cell=R0.BG.get(R0.key(x,z,CR.big));if(!cell)continue;
+    const [ri,i0]=mpick(cell),r=R0.roads[ri];if(car&&!r.car)continue;if(!car&&r.cls<=1)continue;const dir=i0>=r.p.length-1?-1:i0===0?1:(Math.random()<0.5?1:-1);
+    const lht=lhtNow(),off=car?(r.w/4)*(lht?-1:1):(r.cls>=6?mrr(-0.4,0.4):(r.w/2+mrr(0.8,1.6))*(Math.random()<0.5?1:-1));
+    const a={ri,i:i0,dir,t:Math.random()*2,off,car};crowdPos(a,R0);if(crowdInQ(a.x,a.z)||crowdWet(a.x,a.z))continue;return a}return null}
+function crowdAdvance(a,R0,step){a.t+=step;let guard=0;
+  while(a.t>=a.L&&guard++<6){a.t-=a.L;const r=R0.roads[a.ri];a.i+=a.dir;
+    if(a.i+a.dir<0||a.i+a.dir>=r.p.length){// carrefour : on continue sur une autre rue qui part de ce point, sinon demi-tour
+      const [x,z]=r.p[a.i],cand=(R0.VG.get(R0.key(x,z,CR.cell))||[]).filter(([ri2,i2])=>ri2!==a.ri&&(!a.car||R0.roads[ri2].car)&&Math.hypot(R0.roads[ri2].p[i2][0]-x,R0.roads[ri2].p[i2][1]-z)<3);
+      if(cand.length){const [ri2,i2]=mpick(cand),r2=R0.roads[ri2];a.ri=ri2;a.i=i2;a.dir=i2===0?1:-1;if(a.car)a.off=(r2.w/4)*(lhtNow()?-1:1)}
+      else{a.dir=-a.dir;a.off=a.car?a.off:-a.off}}
+    crowdPos(a,R0)}
+  crowdPos(a,R0);
+  if(crowdInQ(a.x,a.z)||crowdWet(a.x,a.z)){a.i=a.i+a.dir;a.dir=-a.dir;a.t=Math.max(0,a.L-a.t);if(!a.car)a.off=-a.off;crowdPos(a,R0)}}
+const _co=new THREE.Object3D();
+function crowdTick(dt){
+  const M=CROWD.m;
+  if(!OSMD||inside||!world){if(M)for(const k of ['legL','legR','armL','armR','torso','head','car','moto'])M[k].count=0;return}
+  const R0=crowdRoads();if(!R0.roads.length)return;const m=crowdMeshes(),P=dolly.position,night=nightF>0.5;
+  const isCot=REGION.base==='cotonou',wantP=Math.round((night?26:70)*(GAME&&GAME.settings&&GAME.settings.crowd===0?0:1)),wantC=night?14:(isCot?16:32),wantM=isCot?(night?10:30):0;
+  // apparition progressive / disparition au loin
+  CROWD.peds=CROWD.peds.filter(a=>Math.hypot(a.x-P.x,a.z-P.z)<CR.Rdel);CROWD.cars=CROWD.cars.filter(a=>Math.hypot(a.x-P.x,a.z-P.z)<CR.Rdel);
+  for(let k=0;k<3&&CROWD.peds.length<Math.min(wantP,m.NP-wantM);k++){const a=crowdSpawn(false,R0);if(!a)break;a.v=mrr(1.1,1.6);a.ph=Math.random()*6;
+    const sk=SKINS[REGION.skins==='dark'?Math.floor(Math.random()*8):REGION.skins==='light'?8+Math.floor(Math.random()*8):Math.random()<0.55?8+Math.floor(Math.random()*8):Math.floor(Math.random()*8)];
+    a.c={skin:sk,top:mpick(isCot?['#e3a21a','#c0392b','#1d4e89','#2a9d8f','#8e2c48','#f4f1ea','#3a7d44','#e8822a']:['#2f3a4a','#7a2f3a','#e9e4da','#3b5a7a','#5a5a5a','#c8b38a','#1a1a1a','#8eaecb']),bot:mpick(['#1f2a3a','#3a3a3a','#2b4a6b','#6b5a3a','#1a1a1a','#e9e4da'])};CROWD.peds.push(a)}
+  const nC=CROWD.cars.filter(c=>!c.moto).length,nM=CROWD.cars.length-nC;
+  for(let k=0;k<2;k++){const moto=nM<Math.min(wantM,m.NM)&&(Math.random()<0.6||nC>=Math.min(wantC,m.NC));if(!moto&&nC>=Math.min(wantC,m.NC))break;const a=crowdSpawn(true,R0);if(!a)break;
+    a.moto=moto;a.vmax=(moto?mrr(7,11):mrr(7,12))*(R0.roads[a.ri].cls>=4?0.55:1);a.v=a.vmax*0.6;a.col=mpick(REGION.cars||['#e9e6df']);a.ang=Math.atan2(a.fx,a.fz);
+    if(moto)a.c={skin:SKINS[Math.floor(Math.random()*8)],top:REGION.zemColor==='yellow'?'#e3b21a':'#c0392b',bot:'#1f2a3a'};CROWD.cars.push(a)}
+  // voitures : suivent la rue, freinent derrière une autre voiture ou devant le joueur
+  for(const c of CROWD.cars){let target=c.vmax;const look=(ox,oz,d0,lat)=>{const dx=ox-c.x,dz=oz-c.z,ah=dx*c.fx*c.dir+dz*c.fz*c.dir;if(ah>0&&ah<d0&&Math.abs(-dx*c.fz+dz*c.fx)<lat)target=Math.min(target,Math.max(0,(ah-3)*0.9))};
+    look(P.x,P.z,9,2.2);for(const o of CROWD.cars)if(o!==c&&o.ri===c.ri&&o.dir===c.dir)look(o.x,o.z,10,1.6);
+    c.v+=(target-c.v)*Math.min(1,dt*(target<c.v?4:1));crowdAdvance(c,R0,c.v*dt);
+    const ang=Math.atan2(c.fx*c.dir,c.fz*c.dir);let da=ang-c.ang;da=Math.atan2(Math.sin(da),Math.cos(da));c.ang+=da*Math.min(1,dt*5)}
+  for(const a of CROWD.peds){crowdAdvance(a,R0,a.v*dt);a.ph+=dt*a.v*4.2}
+  // rendu instancié
+  let ip=0,ic=0,im=0;const col=new THREE.Color();
+  const body=(x,z,ang,ph,c,seated)=>{if(ip>=m.NP)return;const ca=Math.cos(ang),sa=Math.sin(ang),sw=seated?0:Math.sin(ph)*0.5,hip=seated?0.95:0.86,yb=seated?0.55:0;
+    const part=(mesh,ox,oy,rx,color)=>{_co.position.set(x+ca*ox,oy,z-sa*ox);_co.rotation.set(rx,ang,0,'YXZ');_co.scale.set(1,1,1);_co.updateMatrix();mesh.setMatrixAt(ip,_co.matrix);mesh.setColorAt(ip,col.set(color))};
+    part(m.legL,-0.11,hip,seated?-1.3:sw,c.bot);part(m.legR,0.11,hip,seated?-1.3:-sw,c.bot);part(m.torso,0,hip-0.02+yb*0.02,0,c.top);
+    part(m.armL,-0.29,hip+0.56,seated?-0.9:-sw*0.8,c.top);part(m.armR,0.29,hip+0.56,seated?-0.9:sw*0.8,c.top);part(m.head,0,hip+0.73,0,c.skin);ip++};
+  for(const a of CROWD.peds){const ang=Math.atan2(a.fx*a.dir,a.fz*a.dir);body(a.x,a.z,ang,a.ph,a.c,false)}
+  for(const c of CROWD.cars){_co.position.set(c.x,0,c.z);_co.rotation.set(0,c.ang,0);_co.scale.setScalar(1);_co.updateMatrix();
+    if(c.moto){if(im>=m.NM)continue;m.moto.setMatrixAt(im++,_co.matrix);body(c.x-Math.sin(c.ang)*0.15,c.z-Math.cos(c.ang)*0.15,c.ang,0,c.c,true)}
+    else{if(ic>=m.NC)continue;m.car.setMatrixAt(ic,_co.matrix);m.car.setColorAt(ic,col.set(c.col).convertSRGBToLinear());ic++}}
+  for(const k of ['legL','legR','armL','armR','torso','head']){const mm=m[k];mm.count=ip;mm.instanceMatrix.needsUpdate=true;if(mm.instanceColor)mm.instanceColor.needsUpdate=true}
+  m.car.count=ic;m.car.instanceMatrix.needsUpdate=true;if(m.car.instanceColor)m.car.instanceColor.needsUpdate=true;m.moto.count=im;m.moto.instanceMatrix.needsUpdate=true}
+function crowdNearest(){const P=dolly.position;let best=null,bd=2.2;for(const a of CROWD.peds){const d=Math.hypot(a.x-P.x,a.z-P.z);if(d<bd){bd=d;best=a}}return best?{a:best,d:bd}:null}
+window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,tp:(x,z)=>{if(!inside)dolly.position.set(x,0,z)}});
 
 async function boot(){
   try{
