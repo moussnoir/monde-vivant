@@ -217,5 +217,376 @@
   "cat": "monument",
   "h": 52.0,
   "kb": 4133
+ },
+ "kenney/bathroomCabinet": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 7,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bathroomMirror": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 7,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bathroomSink": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 22,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bathtub": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 35,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bedDouble": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 23,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bedSingle": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 18,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bookcaseOpen": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 18,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/books": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 7,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/cabinetBedDrawerTable": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 12,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/cabinetTelevision": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 10,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/ceilingFan": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 15,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/chair": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 11,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/chairCushion": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 12,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/chairDesk": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 38,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/coatRackStanding": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 13,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/computerKeyboard": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 3,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/computerScreen": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 6,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/desk": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 15,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/dryer": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 17,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/hoodModern": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 4,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenBlender": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 18,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenCabinet": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 10,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenCabinetUpper": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 8,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenCoffeeMachine": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 13,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenFridgeLarge": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 30,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenMicrowave": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 11,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenSink": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 23,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/kitchenStove": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 53,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/lampRoundFloor": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 6,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/lampRoundTable": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 6,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/laptop": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 5,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/loungeChair": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 9,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/loungeSofa": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 9,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/pillow": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 5,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/plantSmall1": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 8,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/pottedPlant": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 7,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/radio": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 24,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/rugDoormat": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 13,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/rugRectangle": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 3,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/rugRound": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 10,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/shower": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 51,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/speaker": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 15,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/stoolBar": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 12,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/table": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 8,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/tableCoffee": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 8,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/tableRound": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 6,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/televisionModern": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 6,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/toaster": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 15,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/toilet": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 18,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/trashcan": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 6,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/washer": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 47,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/sideTable": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 9,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
+ },
+ "kenney/bookcaseClosedDoors": {
+  "cat": "furniture",
+  "h": 1,
+  "kb": 22,
+  "bin": true,
+  "src": "Kenney Furniture Kit (CC0)"
  }
 }

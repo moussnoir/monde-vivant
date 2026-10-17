@@ -7,6 +7,7 @@ Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotono
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
 - `models/osm/` : plans OpenStreetMap pré-générés (~70 villes) + `index.json`
+- `models/kenney/` : meubles et électroménager du Furniture Kit de Kenney (CC0, www.kenney.nl) : cuisine, salle d'eau, chambre, salon
 - `vendor/three/` : three.js r128 et ses modules, servis en local (plus de dépendance aux CDN)
 - `lib/osm-lib.mjs` : conversion OpenStreetMap → plan du jeu, partagée par le jeu, le script et le serveur
 - `server/` : serveur de cartes OpenStreetMap à la demande (optionnel)

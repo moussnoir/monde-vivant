@@ -393,7 +393,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.20 · Monde ouvert : la vraie ville sans limite</div>
+    <div class="eyebrow">Version 0.21 · Logements meublés, électroménager utilisable</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -1939,6 +1939,11 @@ function openBld(d){
     const spotW=(Fw,x,z,ry=0,yy=0)=>{const p=fPt(Fw,x,z);return {x:p[0],z:p[1],ly:y,y:yy,ry:Fw.th+ry}};
     const mdl=(mid,Fw,w,h,dd,zc=dd/2)=>{const g=modelInst(mid,{fit:[w,h,dd]});if(!g)return false;const p=fPt(Fw,0,zc);g.position.set(p[0],Fw.y,p[1]);g.rotation.y=Fw.th;grp.add(g);return true};
     const useAt=(Fw,x,z,label,fn,r=1.3)=>{const p=fPt(Fw,x,z);spots.use.push({x:p[0],z:p[1],ly:y,label,fn,r})};
+    // meubles et électroménager (Kenney Furniture Kit, CC0) : place un modèle dans le repère du meuble ; renvoie le groupe ou null
+    const kmd=(name,Fw,w,h,dd,o={})=>{const g=modelInst('kenney/'+name,{fit:[w,h,dd],stretch:o.stretch,ownMat:o.ownMat});if(!g)return null;const p=fPt(Fw,o.x||0,o.z!=null?o.z:dd/2);g.position.set(p[0],Fw.y+(o.y||0),p[1]);g.rotation.y=Fw.th+(o.ry||0);grp.add(g);return g};
+    const lampAt=(g,Fw,yy,label)=>{if(!g)return;const L=new THREE.PointLight(0xffd9a0,0,4.5,2);const p=fPt(Fw,0,0.2);L.position.set(p[0],y+yy,p[1]);grp.add(L);const st={on:false};
+      const set=v=>{st.on=v;L.intensity=v?0.9:0;for(const m of g.userData.mats||[])if(m.emissive){m.emissive.set(v?0x8a7040:0x000000)}};
+      useAt(Fw,0,0.7,()=>st.on?'Éteindre '+label:'Allumer '+label,()=>{set(!st.on);if(st.on)needs({moral:1})},1.1)};
     const seatUse=(sp,lbl)=>spots.use.push({x:sp.x,z:sp.z,ly:y,label:lbl||'S’asseoir',fn:()=>sitOn(sp,rm),r:1.0});
     // ascenseur
     if(d.elevator&&!elevPlaced&&(rm.type==='entree'||d.kind==='floor')){const Fe=atWall(1.5,0.3,false,(Xe)=>{Xe.metal.add(0,0,0.06,1.5,2.4,0.12,'#8d949b');Xe.metal.add(-0.36,0.02,0.13,0.7,2.1,0.03,'#c9ced3');Xe.metal.add(0.36,0.02,0.13,0.7,2.1,0.03,'#c9ced3');Xe.glow.add(0.95,1.2,0.04,0.12,0.18,0.05,'#ffe9a8')},['z-','x-','x+','z+'],0);
@@ -1962,11 +1967,14 @@ function openBld(d){
         Xo.wood.add(0,0,1.35,1.0,0.4,0.55,wood2); if(id==='cotonou'){Xo.glass.add(0,0.4,1.35,0.95,0.02,0.5,'#ffffff');Xo.plasticC.add(0.2,0.42,1.35,0.12,0.24,0.12,'#e8e2d6')}
         col(Fw,-0.5,1.08,0.5,1.62,y,y+0.5); const s1=spotW(Fw,-w/4,0.55),s2=spotW(Fw,w/4,0.55); spots.sofa.push(s1,s2); seatUse(s1,'S’asseoir sur le canapé'); seatUse(s2,'S’asseoir sur le canapé')},['z-','x-','x+','z+'],0);
       if(Fs) col(Fs,-sofaW/2,0,sofaW/2,0.9,y,y+1.0);
-      atWall(1.5,0.5,false,(Xt,Fw)=>{Xt.wood.add(0,0,0.25,1.5,0.5,0.45,wood2);Xt.metal.add(0,0.5,0.22,1.1,0.66,0.06,'#151515');
+      atWall(1.5,0.5,false,(Xt,Fw)=>{if(!kmd('cabinetTelevision',Fw,1.5,0.5,0.45,{stretch:true,z:0.25}))Xt.wood.add(0,0,0.25,1.5,0.5,0.45,wood2);Xt.metal.add(0,0.5,0.22,1.1,0.66,0.06,'#151515');
         const scr=own(canvasMesh(1.0,0.56,192,108,tvPaint));const p=fPt(Fw,0,0.255);scr.position.set(p[0],y+0.83,p[1]);scr.rotation.y=Fw.th;grp.add(scr);rm.tv={on:true,scr};anim.push({t:0,every:2.2,fn:()=>{if(rm.tv.on)scr.userData.draw()}});
         useAt(Fw,0,0.9,()=>rm.tv.on?'Éteindre la télé':'Allumer la télé',()=>{rm.tv.on=!rm.tv.on;scr.visible=rm.tv.on;if(rm.tv.on){scr.userData.draw();toast('La télé est allumée. Asseyez-vous sur le canapé pour la regarder.')}})},['z+','x+','x-','z-'],0.6);
       atWall(0.9,0.35,true,(Xb,Fw)=>{if(mdl('f_shelf',Fw,0.9,1.9,0.35,0.17))Xb=NOOPX;Xb.wood.add(0,0,0.17,0.9,1.9,0.34,wood2);for(let q=1;q<5;q++){Xb.wood.add(0,q*0.45,0.17,0.86,0.03,0.33,wood2);for(let b=0;b<5;b++)Xb.plastic.add(-0.33+b*0.16,q*0.45+0.03,0.17,0.12,rr(0.18,0.3),0.24,pick(acc))}useAt(Fw,0,0.75,'Lire un livre',readBook)});
-      atWall(0.5,0.5,false,(Xp)=>{Xp.plasticC.add(0,0,0.25,0.4,0.42,0.4,'#7a5a3a');Xp.fol.add(0,0.42,0.25,0.6,0.8,0.6,'#3e6b2e')},null,0.4);
+      atWall(0.5,0.5,false,(Xp,Fw)=>{if(kmd('pottedPlant',Fw,0.5,1.1,0.5))return;Xp.plasticC.add(0,0,0.25,0.4,0.42,0.4,'#7a5a3a');Xp.fol.add(0,0.42,0.25,0.6,0.8,0.6,'#3e6b2e')},null,0.4);
+      atWall(0.4,0.4,false,(Xq,Fw)=>{const g=kmd('lampRoundFloor',Fw,0.35,1.6,0.4,{ownMat:true});if(g)lampAt(g,Fw,1.4,'le lampadaire');else{Xq.metalC.add(0,0,0.2,0.04,1.55,0.04,'#333');Xq.plasticC.add(0,1.55,0.2,0.42,0.3,0.42,'#f0e6c8')}},null,0.4);
+      atWall(0.55,0.45,false,(Xq,Fw)=>{if(!kmd('cabinetBedDrawerTable',Fw,0.55,0.55,0.45,{stretch:true}))Xq.wood.add(0,0,0.22,0.55,0.55,0.45,wood2);const g=kmd('radio',Fw,0.42,0.3,0.15,{y:0.55,z:0.22});
+        if(g){const st={on:false};useAt(Fw,0,0.7,()=>st.on?'Éteindre la radio':'Allumer la radio',()=>{st.on=!st.on;radioPlay(st.on);if(st.on){needs({moral:3});toast('La radio joue un air de '+REGION.country+'.')}},1.1)}},null,0.4);
       if(rw*rd>9) center(1.3,0.9,(Xd,Fw)=>{if(mdl('f_table',Fw,2.4,0.95,1.4,0.45))Xd=NOOPX;Xd.wood.add(0,0,0.45,1.3,0.75,0.85,wood2);if(id==='cotonou')Xd.cloth.add(0,0.76,0.45,1.5,1.05,1,pick(acc),-Math.PI/2,0,0);col(Fw,-0.65,0,0.65,0.9,y,y+0.9);
         for(const s of [-1,1]){const cx=s*0.9;const add=(dx,dy,dz,sx,sy,sz)=>{const v=new THREE.Vector3(dx,dy,dz).applyAxisAngle(new THREE.Vector3(0,1,0),-s*Math.PI/2);(id==='cotonou'?Xd.plastic:Xd.wood).add(cx+v.x,dy,0.45+v.z,sx,sy,sz,id==='cotonou'?'#f4f1ea':wood2,0,-s*Math.PI/2,0)};
           add(0,0.42,0,0.44,0.05,0.42);add(0,0.47,-0.19,0.44,0.45,0.05);for(const a of [-1,1])for(const bb of [-1,1])add(a*0.19,0,bb*0.18,0.04,0.43,0.04);const sp=spotW(Fw,cx,0.45,-s*Math.PI/2);spots.seats.push(sp);seatUse(sp,'S’asseoir à table')}});
@@ -1985,30 +1993,44 @@ function openBld(d){
         Xb.fabric.add(0,0.6,1.2,w-0.02,0.05,1.5,pick(id==='cotonou'?['#e3a21a','#8e2c48','#1d4e89','#2a9d8f']:['#8eaecb','#c9b8a0','#5a6470','#d8c8b0']));for(const s of (w>1.2?[-1,1]:[0]))Xb.fabric.add(s*w/4,0.6,0.3,w>1.2?w/2-0.12:w-0.2,0.12,0.38,'#ffffff');
         if(id==='cotonou')Xo.net.add(0,0.65,1.0,w+0.3,1.75,2.2,'#ffffff');
         spots.beds.push(spotW(Fw,0,1.92,0,0.62))},['z-','x-','x+','z+'],0.3);
-      atWall(0.45,0.4,false,(Xn)=>{Xn.wood.add(0,0,0.2,0.45,0.5,0.4,wood2);Xn.plasticC.add(0,0.5,0.2,0.2,0.3,0.2,'#f0e6c8')},null,0.4);
+      atWall(0.45,0.4,false,(Xn,Fw)=>{if(kmd('cabinetBedDrawerTable',Fw,0.45,0.5,0.4,{stretch:true})){const g=kmd('lampRoundTable',Fw,0.2,0.42,0.22,{y:0.5,ownMat:true});if(g)lampAt(g,Fw,0.85,'la lampe de chevet');return}Xn.wood.add(0,0,0.2,0.45,0.5,0.4,wood2);Xn.plasticC.add(0,0.5,0.2,0.2,0.3,0.2,'#f0e6c8')},null,0.4);
       atWall(1.2,0.6,true,(Xw,Fw)=>{if(mdl('f_wardrobe',Fw,1.2,2.0,0.6,0.3))Xw=NOOPX;Xw.wood.add(0,0,0.3,1.2,2.0,0.6,wood2);Xw.metal.add(0,1.0,0.61,0.02,0.6,0.02,'#bbb');if(mine)useAt(Fw,0,1.0,'Changer de tenue',wardrobeUse)});
-      if(rw*rd>8) atWall(1.0,0.55,false,(Xd,Fw)=>{Xd.wood.add(0,0,0.27,1.0,0.74,0.55,wood2);Xd.plastic.add(0.2,0.74,0.25,0.4,0.02,0.3,'#2a2a2a');Xd.plasticC.add(-0.3,0.74,0.2,0.1,0.32,0.1,'#333');if(mine)useAt(Fw,0,0.9,'Travailler à l’ordinateur',deskWork)});
+      if(rw*rd>8) atWall(1.0,0.55,false,(Xd,Fw)=>{if(kmd('desk',Fw,1.0,0.75,0.55,{stretch:true})){kmd('laptop',Fw,0.38,0.24,0.34,{y:0.75,z:0.25});kmd('chairDesk',Fw,0.5,0.95,0.5,{z:0.85,ry:Math.PI})}
+        else{Xd.wood.add(0,0,0.27,1.0,0.74,0.55,wood2);Xd.plastic.add(0.2,0.74,0.25,0.4,0.02,0.3,'#2a2a2a');Xd.plasticC.add(-0.3,0.74,0.2,0.1,0.32,0.1,'#333')}if(mine)useAt(Fw,0,0.9,'Travailler à l’ordinateur',deskWork)});
     }else if(T==='cuisine'){
       const kw=Math.min(2.4,Math.max(1.2,(rw>rd?rw:rd)-1.4));
-      atWall(kw,0.62,false,(Xk,Fw,w)=>{Xk.paint.add(0,0,0.31,w,0.88,0.6,id==='cotonou'?'#e9e4da':'#f2f0ea');Xk.conc.add(0,0.88,0.31,w+0.02,0.04,0.62,id==='cotonou'?'#bdb6aa':'#3a3a3a');
+      atWall(kw,0.62,false,(Xk,Fw,w)=>{if(modelReady('kenney/kitchenStove')){const n=Math.max(2,Math.floor(w/0.6)),sw=w/n,cx=i=>-w/2+sw/2+i*sw;
+          for(let i=0;i<n;i++){const nm=i===0?'kitchenSink':i===1?'kitchenStove':'kitchenCabinet';kmd(nm,Fw,sw,0.9,0.62,{stretch:true,x:cx(i),z:0.31});if(id!=='cotonou'&&i!==1)kmd('kitchenCabinetUpper',Fw,sw,0.62,0.34,{stretch:true,x:cx(i),z:0.17,y:1.45})}
+          if(id!=='cotonou')kmd('hoodModern',Fw,sw*0.95,0.7,0.45,{x:cx(1),z:0.23,y:1.45});
+          useAt(Fw,cx(0),0.9,'Faire la vaisselle',dishesUse,1.0);
+          if(n>2){kmd('kitchenMicrowave',Fw,0.5,0.31,0.38,{x:cx(2),z:0.3,y:0.9});useAt(Fw,cx(2),0.9,'Réchauffer un plat au micro-ondes',microUse,1.0)}
+          if(n>3){kmd('kitchenCoffeeMachine',Fw,0.26,0.26,0.3,{x:cx(3)-0.12,z:0.25,y:0.9});kmd('toaster',Fw,0.26,0.18,0.14,{x:cx(3)+0.15,z:0.3,y:0.9});useAt(Fw,cx(3),0.9,'Faire un café',coffeeUse,1.0)}
+          if(mine)useAt(Fw,cx(1),0.95,'Cuisiner un repas',cookMeal,1.0);return}
+        Xk.paint.add(0,0,0.31,w,0.88,0.6,id==='cotonou'?'#e9e4da':'#f2f0ea');Xk.conc.add(0,0.88,0.31,w+0.02,0.04,0.62,id==='cotonou'?'#bdb6aa':'#3a3a3a');
         Xk.metal.add(-w/2+0.45,0.86,0.3,0.55,0.07,0.42,'#c9ccd0');Xk.metalC.add(-w/2+0.45,0.92,0.08,0.03,0.25,0.03,'#bbb');
         Xk.metal.add(w/2-0.4,0.92,0.3,0.6,0.05,0.5,'#1a1a1a');for(const s of [-1,1])Xk.metalC.add(w/2-0.4+s*0.14,0.97,0.3,0.16,0.02,0.16,'#444');
         if(id==='cotonou'){Xk.plasticC.add(w/2-0.4,0,0.75,0.32,0.55,0.32,'#2f6fb1');Xk.plasticC.add(-w/2+0.3,0,0.8,0.35,0.42,0.35,'#d9483b');for(let q=0;q<3;q++)Xk.plasticS.add(-0.2+q*0.25,0.92,0.3,0.2,0.12,0.2,pick(['#c0392b','#e3a21a','#3a7d44']))}
         else{Xk.wood.add(0,1.45,0.18,w,0.7,0.35,'#f2f0ea')}if(mine)useAt(Fw,0,0.95,'Cuisiner un repas',cookMeal)},['z+','x-','x+','z-'],0.6);
-      atWall(0.7,0.65,true,(Xf,Fw)=>{if(mdl('f_fridge',Fw,0.7,1.75,0.65,0.33))Xf=NOOPX;Xf.paint.add(0,0,0.33,0.7,1.75,0.64,'#f2f2f0');Xf.metal.add(0.27,0.7,0.66,0.04,0.5,0.04,'#bbb');if(mine)useAt(Fw,0,0.95,'Ouvrir le frigo',fridgeUse)});
+      atWall(0.7,0.65,true,(Xf,Fw)=>{if(mdl('f_fridge',Fw,0.7,1.75,0.65,0.33)||kmd('kitchenFridgeLarge',Fw,0.8,1.8,0.65))Xf=NOOPX;Xf.paint.add(0,0,0.33,0.7,1.75,0.64,'#f2f2f0');Xf.metal.add(0.27,0.7,0.66,0.04,0.5,0.04,'#bbb');if(mine)useAt(Fw,0,0.95,'Ouvrir le frigo',fridgeUse)});
       if(id==='cotonou'&&modelReady('f_stove'))atWall(0.9,0.6,false,(Xs,Fw)=>{mdl('f_stove',Fw,0.9,0.9,0.6,0.3)});
       if(rw*rd>6.5) center(1.0,0.75,(Xd,Fw)=>{Xd.wood.add(0,0,0.37,0.9,0.75,0.7,wood2);col(Fw,-0.45,0,0.45,0.75,y,y+0.9);
         for(const s of [-1,1]){const cx=s*0.72;Xd.plastic.add(cx,0.42,0.37,0.4,0.05,0.4,id==='cotonou'?'#d9483b':'#3a3a3a');Xd.plastic.add(cx+s*0.18,0.47,0.37,0.05,0.42,0.4,id==='cotonou'?'#d9483b':'#3a3a3a');for(const a of[-1,1])for(const bb of[-1,1])Xd.metalC.add(cx+a*0.17,0,0.37+bb*0.17,0.03,0.42,0.03,'#666');const sp=spotW(Fw,cx,0.37,-s*Math.PI/2);spots.seats.push(sp);seatUse(sp,'S’asseoir à table')}});
     }else if(T==='douche'){
       const XB2=XR; XB2.tiles.add(0,0.002,0,rw-0.02,0.012,rd-0.02,'#cfe0e8');
-      atWall(0.95,0.95,false,(Xs,Fw)=>{if(mine)useAt(Fw,0,0.9,'Prendre une douche',showerUse,1.4);Xs.tiles.add(0,0,0.47,0.95,0.06,0.95,'#e8eef0');Xs.metalC.add(0,1.9,0.12,0.04,0.25,0.04,'#bbb');Xs.metal.add(0,2.1,0.95,0.95,0.03,0.03,'#bbb');Xs.cloth.add(0.0,0.3,0.95,0.95,1.75,1,pick(['#9cc0e0','#f2c6d0','#e8e2d6']))},['z+','x-','x+','z-'],0.0);
-      atWall(0.45,0.65,false,(Xt)=>{Xt.paint.add(0,0,0.42,0.4,0.42,0.5,'#f4f4f2');Xt.paint.add(0,0,0.1,0.42,0.8,0.2,'#f4f4f2')},null,0.0);
-      atWall(0.6,0.45,false,(Xl,Fw)=>{useAt(Fw,0,0.8,'Se regarder dans le miroir',mirrorUse,1.1);Xl.paint.add(0,0.62,0.22,0.55,0.2,0.42,'#f4f4f2');Xl.paint.add(0,0,0.15,0.16,0.62,0.16,'#f4f4f2');Xl.mirror.add(0,1.05,0.015,0.5,0.6,0.02,'#ffffff')},null,0.0);
+      if(rw*rd>5.5&&modelReady('kenney/bathtub'))atWall(1.6,0.8,false,(Xs,Fw)=>{kmd('bathtub',Fw,1.6,0.6,0.78);if(mine)useAt(Fw,0,1.0,'Prendre un bain',bathUse,1.4)},['z+','x-','x+','z-'],0.0);
+      atWall(0.95,0.95,false,(Xs,Fw)=>{if(mine)useAt(Fw,0,0.9,'Prendre une douche',showerUse,1.4);if(kmd('shower',Fw,0.95,2.1,0.95))return;Xs.tiles.add(0,0,0.47,0.95,0.06,0.95,'#e8eef0');Xs.metalC.add(0,1.9,0.12,0.04,0.25,0.04,'#bbb');Xs.metal.add(0,2.1,0.95,0.95,0.03,0.03,'#bbb');Xs.cloth.add(0.0,0.3,0.95,0.95,1.75,1,pick(['#9cc0e0','#f2c6d0','#e8e2d6']))},['z+','x-','x+','z-'],0.0);
+      atWall(0.45,0.65,false,(Xt,Fw)=>{useAt(Fw,0,0.8,'Aller aux toilettes',toiletUse,1.0);if(kmd('toilet',Fw,0.45,0.75,0.65))return;Xt.paint.add(0,0,0.42,0.4,0.42,0.5,'#f4f4f2');Xt.paint.add(0,0,0.1,0.42,0.8,0.2,'#f4f4f2')},null,0.0);
+      atWall(0.6,0.45,false,(Xl,Fw)=>{useAt(Fw,0,0.8,'Se regarder dans le miroir',mirrorUse,1.1);if(kmd('bathroomSink',Fw,0.55,0.9,0.45)){kmd('bathroomMirror',Fw,0.5,0.72,0.08,{y:1.05,z:0.04});return}Xl.paint.add(0,0.62,0.22,0.55,0.2,0.42,'#f4f4f2');Xl.paint.add(0,0,0.15,0.16,0.62,0.16,'#f4f4f2');Xl.mirror.add(0,1.05,0.015,0.5,0.6,0.02,'#ffffff')},null,0.0);
+      atWall(0.62,0.62,false,(Xq,Fw)=>{const g=kmd('washer',Fw,0.62,0.85,0.62);if(!g)return;const st={on:false,t:0},base=g.position.clone();
+        anim.push({every:0,fn:dt=>{if(!st.on)return;st.t+=dt;g.position.set(base.x+Math.sin(st.t*47)*0.008,base.y,base.z+Math.cos(st.t*39)*0.008);if(st.t>12){st.on=false;g.position.copy(base);needs({moral:4});toast('La lessive est terminée : linge propre · Moral +4','good')}}});
+        useAt(Fw,0,0.8,()=>st.on?'Lave-linge en marche…':'Lancer une lessive',()=>{if(st.on)return;if(!cool('wash',60))return;st.on=true;st.t=0;toast('Le lave-linge démarre (12 s).')},1.1)},null,0.0);
       if(id==='cotonou') atWall(0.45,0.45,false,(Xq)=>{Xq.plasticC.add(0,0,0.22,0.42,0.38,0.42,'#2f6fb1');Xq.plasticC.add(0.0,0.38,0.22,0.36,0.02,0.36,'#5a9ad8')},null,0.0);
     }else if(T==='bureau'){
       atWall(1.2,0.6,false,(Xd,Fw)=>{if(mine)useAt(Fw,0,1.0,'Travailler à l’ordinateur',deskWork);Xd.wood.add(0,0,0.3,1.2,0.74,0.6,wood2);Xd.plastic.add(0,0.74,0.25,0.5,0.32,0.04,'#151515');Xd.plastic.add(0,0.74,0.42,0.4,0.02,0.15,'#2a2a2a');Xd.fabric.add(0,0.42,0.95,0.48,0.08,0.45,'#2a2a2a');Xd.fabric.add(0,0.5,1.15,0.48,0.5,0.06,'#2a2a2a')});
       atWall(0.9,0.35,true,(Xb,Fw)=>{Xb.wood.add(0,0,0.17,0.9,1.9,0.34,wood2);for(let q=1;q<5;q++){Xb.wood.add(0,q*0.45,0.17,0.86,0.03,0.33,wood2);for(let b=0;b<5;b++)Xb.plastic.add(-0.33+b*0.16,q*0.45+0.03,0.17,0.12,rr(0.18,0.3),0.24,pick(acc))}useAt(Fw,0,0.75,'Lire un livre',readBook)});
     }else if(T==='entree'){
+      atWall(0.45,0.45,false,(Xq,Fw)=>{kmd('coatRackStanding',Fw,0.45,1.75,0.45)},null,0.3);
+      center(0.9,0.5,(Xq,Fw)=>{kmd('rugDoormat',Fw,0.9,0.02,0.5)});
       atWall(1.2,0.25,false,(Xm)=>{for(let q=0;q<6;q++)Xm.metal.add(-0.4+(q%3)*0.4,1.1+Math.floor(q/3)*0.32,0.1,0.36,0.28,0.2,'#7a6a4a')},null,0.0);
       atWall(0.5,0.5,false,(Xp)=>{Xp.plasticC.add(0,0,0.25,0.4,0.42,0.4,'#7a5a3a');Xp.fol.add(0,0.42,0.25,0.6,0.8,0.6,'#3e6b2e')},null,0.4);
     }else if(T==='boutique'){
@@ -2225,7 +2247,8 @@ function buildInterior(door){
     light(-2.2,0,1.4,12); light(3.4,-0.5,1.0,9);
     clock.position.set(-2.4,2.15,-Dd/2+0.03); grp.add(clock);
     frame(-3.9,1.4,-Dd/2+0.01,0.5,0.62,'z',1); frame(-0.9,1.45,-Dd/2+0.01,0.62,0.48,'z',1); frame(px-0.08,1.5,-1.2,0.5,0.6,'x',-1);
-    if(id==='tokyo'){
+    if(id!=='tokyo'&&modelReady('kenney/kitchenStove')&&modelReady('kenney/bedDouble')&&modelReady('kenney/toilet')){furnishHome({grp,col,anim,lights,spots,door,id,Wd,Dd,Hc,px,ex,wallIn,wc,tiles,net,wood,makeTV,addFan,light})}
+    else if(id==='tokyo'){
       tatami.add(0,-0.1,0,0,0,0,'#ffffff');
       tiles.add(ex,-0.08,Dd/2-0.7,1.3,0.06,1.2,'#ffffff');
       for(let k=0;k<3;k++) paint.add(ex-0.4+k*0.35,0,Dd/2-0.6,0.12,0.06,0.26,pick(['#222','#8a2f2f','#2f4a7a','#f4f4f4']));
@@ -2359,6 +2382,64 @@ function buildInterior(door){
   grp.traverse(o=>{if(o.isInstancedMesh){o.castShadow=false}});
   R=R0;
   return {grp,cols:icols,anim,lights,spots,exit:{x:ex,z:Dd/2-0.55},spawn:{x:ex,z:Dd/2-0.9}};
+}
+/* ---- Logement entièrement meublé : meubles et électroménager réels (Kenney Furniture Kit, CC0), tous utilisables ----
+   Plan : séjour + cuisine ouverte à gauche de la cloison (x<px), chambre à droite avec salle d'eau fermée dans l'angle. */
+function furnishHome(C){const {grp,col,anim,spots,door,id,Wd,Dd,Hc,px,wallIn,wc,tiles,net,makeTV,addFan,light}=C;spots.use=[];
+  const H=Math.PI/2;
+  // place un modèle : (x,z) centre au sol, ry orientation de la face avant (0 = vers +z), [w,h,d] taille réelle avant rotation
+  const put=(name,x,z,ry,w,h,d,o={})=>{const g=modelInst('kenney/'+name,{fit:[w,h,d],stretch:o.stretch,ownMat:o.ownMat});if(!g)return null;g.position.set(x,o.y||0,z);g.rotation.y=ry;grp.add(g);
+    if(!o.nocol){const q=Math.abs(Math.sin(ry))>0.5,hw=(q?d:w)/2,hd=(q?w:d)/2;col(x-hw,z-hd,x+hw,z+hd)}return g};
+  const use=(x,z,label,fn,o={})=>spots.use.push({x,z,label,fn,r:o.r||1.2,mine:!!o.mine});
+  const front=(x,z,ry,dist)=>[x+Math.sin(ry)*dist,z+Math.cos(ry)*dist];
+  const lamp=(g,x,y,z,label)=>{if(!g)return;const L=new THREE.PointLight(0xffd9a0,0,5,2);L.position.set(x,y,z);grp.add(L);const st={on:false};
+    use(x,z,()=>st.on?'Éteindre '+label:'Allumer '+label,()=>{st.on=!st.on;L.intensity=st.on?1.0:0;for(const m of g.userData.mats||[])if(m.emissive)m.emissive.set(st.on?0x8a7040:0);if(st.on)needs({moral:1})},{r:1.1})};
+  // ---------- cuisine ouverte (mur ouest) : frigo, évier, cuisinière + hotte, plan avec micro-ondes, cafetière et grille-pain
+  const kx=-Wd/2+0.33,kr=H;
+  put('kitchenFridgeLarge',kx+0.02,1.0,kr,0.62,1.85,0.66);use(...front(kx,1.0,kr,0.9),'Ouvrir le frigo',fridgeUse,{mine:true});
+  put('kitchenSink',kx,1.62,kr,0.62,0.9,0.62,{stretch:true});use(...front(kx,1.62,kr,0.9),'Faire la vaisselle',dishesUse,{mine:true});
+  put('kitchenStove',kx,2.24,kr,0.62,0.9,0.62,{stretch:true});use(...front(kx,2.24,kr,0.9),'Cuisiner un repas',cookMeal,{mine:true});
+  if(id!=='cotonou')put('hoodModern',kx-0.08,2.24,kr,0.6,0.75,0.42,{y:1.5,nocol:true});
+  put('kitchenCabinet',kx,2.86,kr,0.62,0.9,0.62,{stretch:true});
+  put('kitchenMicrowave',kx-0.02,2.8,kr,0.48,0.3,0.36,{y:0.9,nocol:true});use(...front(kx,2.86,kr,0.9),'Réchauffer un plat au micro-ondes',microUse,{mine:true});
+  for(const [z0,nm] of [[1.62,'kitchenCabinetUpper'],[2.86,'kitchenCabinetUpper']])if(id!=='cotonou')put(nm,kx-0.13,z0,kr,0.62,0.62,0.34,{y:1.45,stretch:true,nocol:true});
+  put('kitchenCoffeeMachine',kx-0.05,1.45,kr,0.24,0.26,0.28,{y:0.9,nocol:true});put('toaster',kx-0.05,1.85,kr,0.26,0.18,0.14,{y:0.9,nocol:true});use(...front(kx,1.45,kr,0.9),'Faire un café',coffeeUse,{mine:true,r:0.9});
+  put('trashcan',kx+0.05,3.3,kr,0.3,0.55,0.32);
+  // ---------- coin repas
+  const tx=-1.9,tz=2.0;put('tableRound',tx,tz,0,1.1,0.76,1.1);
+  for(const [dx,dz,ry] of [[-0.85,0,H],[0.85,0,-H],[0,-0.8,0]]){const cx=tx+dx,cz=tz+dz;put('chairCushion',cx,cz,ry,0.45,0.95,0.45);use(cx,cz,'S’asseoir à table',()=>sitOn({x:cx,z:cz,ly:0,ry},null),{r:0.9})}
+  spots.table={x:tx-0.85,z:tz,ry:H};
+  // ---------- salon : meuble télé + télévision qui diffuse, canapé face à l'écran, table basse, tapis, lampadaire, bibliothèque, radio, plante
+  const tvx=-Wd/2+0.3,tvz=-0.4;put('cabinetTelevision',tvx,tvz,H,1.5,0.5,0.45,{stretch:true});makeTV(tvx+0.02,0.5,tvz,H,1.0);
+  const sx=-2.0;put('rugRectangle',-3.4,tvz,H,2.4,0.02,1.7,{nocol:true});put('loungeSofa',sx,tvz,-H,2.1,0.9,0.92);put('tableCoffee',-3.5,tvz,H,1.1,0.42,0.62);
+  for(const dz of [-0.5,0.5]){const sp={x:sx-0.15,z:tvz+dz,ly:0,ry:-H};use(sp.x+0.3,sp.z,'S’asseoir sur le canapé',()=>sitOn(sp,{tv:{on:true}}),{r:0.9})}
+  lamp(put('lampRoundFloor',-1.15,-1.55,0,0.36,1.65,0.4,{ownMat:true}),-1.15,1.45,-1.55,'le lampadaire');
+  put('bookcaseOpen',-3.6,-Dd/2+0.22,0,1.1,2.0,0.4);use(-3.6,-Dd/2+0.9,'Lire un livre',readBook);
+  put('sideTable',-1.2,-Dd/2+0.3,0,0.55,0.55,0.45)||put('cabinetBedDrawerTable',-1.2,-Dd/2+0.3,0,0.55,0.55,0.45,{stretch:true});
+  {const g=put('radio',-1.2,-Dd/2+0.3,0,0.42,0.3,0.15,{y:0.55,nocol:true});if(g){const st={on:false};use(-1.2,-Dd/2+0.95,()=>st.on?'Éteindre la radio':'Allumer la radio',()=>{st.on=!st.on;radioPlay(st.on);if(st.on){needs({moral:3});toast('La radio joue un air de '+REGION.country+'.')}})}}
+  put('pottedPlant',px-0.45,-Dd/2+0.4,0,0.5,1.2,0.5);put('pottedPlant',-Wd/2+0.4,-Dd/2+0.4,0,0.5,1.1,0.5);
+  put('coatRackStanding',C.ex+0.9,Dd/2-0.35,Math.PI,0.45,1.75,0.45);put('rugDoormat',C.ex,Dd/2-0.45,Math.PI,0.9,0.02,0.5,{nocol:true});
+  if(id==='cotonou')addFan(-2.6,0.8);
+  // ---------- chambre : lit double, chevets + lampes, armoire, bureau avec ordinateur portable
+  const bx=3.4,bz=-Dd/2+1.1;put('bedDouble',bx,bz,0,1.7,0.62,2.15);spots.bed={x:bx,y:0.62,z:bz,ry:Math.PI};
+  if(id==='cotonou')net.add(bx,0.65,bz,2.0,1.75,2.3,'#ffffff');
+  for(const s2 of [-1,1]){const nx=bx+s2*1.2;put('cabinetBedDrawerTable',nx,-Dd/2+0.28,0,0.48,0.52,0.42,{stretch:true});lamp(put('lampRoundTable',nx,-Dd/2+0.28,0,0.2,0.42,0.22,{y:0.52,ownMat:true,nocol:true}),nx,0.95,-Dd/2+0.6,'la lampe de chevet')}
+  put('bookcaseClosedDoors',px+0.35,-1.9,H,1.2,2.0,0.55)||(wallIn.add(px+0.35,0,-1.9,0.55,2.0,1.2,'#d9c3a0'),col(px+0.07,-2.5,px+0.63,-1.3));use(px+0.95,-1.9,'Changer de tenue',wardrobeUse,{mine:true});
+  put('desk',px+0.45,0.3,H,1.2,0.76,0.6,{stretch:true});put('laptop',px+0.35,0.3,H,0.36,0.24,0.32,{y:0.76,nocol:true});put('chairDesk',px+1.05,0.3,-H,0.55,1.0,0.55);
+  use(px+1.0,0.3,'Travailler à l’ordinateur',deskWork,{mine:true});
+  // ---------- salle d'eau fermée (angle sud-est) : douche, WC, lavabo + miroir, lave-linge
+  const bx0=Wd/2-1.75,bz0=Dd/2-2.7,t=0.12;
+  wallIn.add(bx0,0,(bz0+0.95+Dd/2)/2,t,Hc,Dd/2-bz0-0.95,wc);col(bx0-t/2,bz0+0.95,bx0+t/2,Dd/2);
+  wallIn.add((bx0+Wd/2)/2,0,bz0,Wd/2-bx0,Hc,t,wc);col(bx0,bz0-t/2,Wd/2,bz0+t/2);
+  wallIn.add(bx0,2.15,bz0+0.47,t,Hc-2.15,0.95,wc);
+  tiles.add((bx0+Wd/2)/2,0.004,(bz0+Dd/2)/2,Wd/2-bx0-0.05,0.012,Dd/2-bz0-0.05,'#cfe0e8');
+  light((bx0+Wd/2)/2,(bz0+Dd/2)/2,0.8,5);
+  put('shower',Wd/2-0.5,Dd/2-0.5,Math.PI,0.95,2.1,0.95);use(Wd/2-0.5,Dd/2-1.3,'Prendre une douche',showerUse,{mine:true});
+  put('toilet',Wd/2-0.35,bz0+0.55,-H,0.45,0.78,0.66);use(Wd/2-0.9,bz0+0.55,'Aller aux toilettes',toiletUse,{r:1.0});
+  put('bathroomSink',bx0+0.75,bz0+0.28,0,0.55,0.9,0.45);put('bathroomMirror',bx0+0.75,bz0+0.1,0,0.5,0.72,0.08,{y:1.05,nocol:true});use(bx0+0.75,bz0+0.9,'Se regarder dans le miroir',mirrorUse,{r:1.0});
+  {const wx=bx0+0.45,wz=Dd/2-0.4,g=put('washer',wx,wz,Math.PI,0.6,0.85,0.6);if(g){const st={on:false,t:0},base=g.position.clone();
+    anim.push({every:0,fn:dt=>{if(!st.on)return;st.t+=dt;g.position.set(base.x+Math.sin(st.t*47)*0.008,0,base.z+Math.cos(st.t*39)*0.008);if(st.t>12){st.on=false;g.position.copy(base);needs({moral:4});toast('La lessive est terminée : linge propre · Moral +4','good')}}});
+    use(wx,wz-0.85,()=>st.on?'Lave-linge en marche…':'Lancer une lessive',()=>{if(st.on)return;if(!cool('wash',60))return;st.on=true;st.t=0;toast('Le lave-linge démarre (12 s).')},{mine:true,r:1.0})}}
 }
 let inside=null, outsideState=null;
 function enterInterior(door){
@@ -3303,6 +3384,7 @@ function computeAction(){
     const e=inside.exit; consider(Math.hypot(P.x-e.x,P.z-e.z),1.6,{pri:1,label:'Sortir',fn:exitInterior});
     if(inside.spots.counter){const c=inside.spots.counter;consider(Math.hypot(P.x-c.x,P.z-c.z),2.7,{pri:3,label:'Acheter · '+inside.door.name,fn:()=>openShop(inside.door)})}
     if(isMyHome(inside.door)&&inside.spots.bed){const b=inside.spots.bed;consider(Math.hypot(P.x-b.x,P.z-b.z),2.3,{pri:3,label:'Dormir',fn:sleepNow})}
+    if(inside.spots.use)for(const u of inside.spots.use){if(u.mine&&!isMyHome(inside.door))continue;consider(Math.hypot(P.x-u.x,P.z-u.z),u.r||1.2,{pri:4,label:typeof u.label==='function'?u.label():u.label,fn:u.fn})}
     for(const n of npcs) if(n.inside) consider(Math.hypot(P.x-n.g.position.x,P.z-n.g.position.z),2.6,{pri:2,label:'Parler à '+first(n),fn:()=>openCard(n)});
   }else{
     const T=missionTarget(); if(T) consider(Math.hypot(P.x-T.x,P.z-T.z),2.4,{pri:6,label:T.label,fn:missionStep});
@@ -3564,6 +3646,16 @@ function cookMeal(){const food=Object.entries(GAME.inv).find(([k,it])=>it.type==
   if(!cool('cook',20))return;const [k,it]=food;busy=true;
   fadeTo(()=>{busy=false;const fx={};for(const q in it.fx||{})fx[q]=Math.round(it.fx[q]*1.7);fx.moral=(fx.moral||0)+8;needs(fx);it.n--;if(it.n<=0)delete GAME.inv[k];GAME.stats.meals++;addXP(6);ev('eat');markSave();
     toast('Vous cuisinez un bon repas maison avec : '+it.name.toLowerCase()+' · '+fxTxt(fx),'good')})}
+function dishesUse(){if(!cool('dishes',60))return;busy=true;fadeTo(()=>{busy=false;needs({moral:2});addXP(2);toast('Vaisselle faite, cuisine rangée · Moral +2','good')})}
+function microUse(){const food=Object.entries(GAME.inv).find(([k,it])=>it.type==='food');if(!cool('micro',45))return;toast('Le micro-ondes tourne…');setTimeout(()=>{if(food){const [k,it]=food;it.n=(it.n||1)-1;if(it.n<=0)delete GAME.inv[k];needs({faim:22});toast('Plat bien chaud · Faim +22','good')}else{needs({faim:8});toast('Vous réchauffez un reste · Faim +8','good')}markSave()},2500)}
+function coffeeUse(){if(!cool('coffee',90))return;toast('La cafetière coule un café…');setTimeout(()=>{needs({energie:14});toast('Un bon café · Énergie +14','good')},2000)}
+function bathUse(){if(!cool('bath',120))return;busy=true;fadeTo(()=>{busy=false;needs({moral:18,energie:10});toast('Un long bain chaud · Moral +18, Énergie +10','good')})}
+function toiletUse(){if(!cool('wc',60))return;busy=true;fadeTo(()=>{busy=false;needs({moral:3});toast('Pause aux toilettes · Moral +3')})}
+// radio : petite boucle musicale synthétisée (pentatonique) tant qu'elle est allumée
+function radioPlay(on){const a=audio.ctx;if(!a||!audio.master){if(on)toast('Activez le son pour entendre la radio.');return}
+  if(radioPlay.t){clearInterval(radioPlay.t);radioPlay.t=null}if(!on)return;const sc=[0,2,4,7,9,12,14],root=REGION.base==='cotonou'?220:REGION.base==='tokyo'?196:261.6;let i=0;
+  radioPlay.t=setInterval(()=>{if(!inside){radioPlay(false);return}const o=a.createOscillator(),g=a.createGain();o.type=i%4===0?'triangle':'sine';o.frequency.value=root*Math.pow(2,sc[(i*5+(i>>2))%sc.length]/12)*(i%8===0?0.5:1);
+    g.gain.setValueAtTime(0.0001,a.currentTime);g.gain.exponentialRampToValueAtTime(0.06,a.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+0.35);o.connect(g).connect(audio.master);o.start();o.stop(a.currentTime+0.4);i++},260)}
 function fridgeUse(){if(!cool('fridge',90))return;needs({energie:10,faim:6});toast('Une boisson bien fraîche du frigo · Énergie +10','good')}
 function showerUse(){if(!cool('shower',60))return;busy=true;fadeTo(()=>{busy=false;needs({moral:12,energie:6});toast('Une bonne douche · Moral +12','good')})}
 function mirrorUse(){const prev=camMode;setCam(3);toast('Vous vous regardez dans le miroir.');setTimeout(()=>{if(camMode===3&&prev!==3)setCam(prev)},3500)}
@@ -4204,9 +4296,9 @@ async function loadModels(){
   let idx=null; try{const r=await fetch('models/index.json',{cache:'no-cache'});if(r.ok)idx=await r.json()}catch(e){}
   if(!idx)return; Object.assign(MODEL_IDX,idx);
   // créatures d'abord, puis monuments de la ville, puis meubles et véhicules
-  const ids=Object.keys(idx).filter(id=>!LM_CITY[id]&&!id.startsWith('kit')&&!id.startsWith('h_')),pri=id=>id.startsWith('c_')?0:id.startsWith('v_')?2:3;ids.sort((a,b)=>pri(a)-pri(b));
+  const ids=Object.keys(idx).filter(id=>!LM_CITY[id]&&!id.startsWith('kit')&&!id.startsWith('h_')),pri=id=>id.startsWith('c_')?0:(id.startsWith('kenney/')||id.startsWith('f_'))?1:id.startsWith('v_')?2:3;ids.sort((a,b)=>pri(a)-pri(b));
   const first=ids.filter(id=>id.startsWith('c_'));await Promise.all(first.map(fetchModel));kitLoad();charsForCity();
-  lmCityModels();for(const id of ids)if(!first.includes(id))await fetchModel(id);
+  lmCityModels();const furn=ids.filter(id=>id.startsWith('kenney/'));await Promise.all(furn.map(fetchModel));for(const id of ids)if(!first.includes(id)&&!furn.includes(id))await fetchModel(id);
 }
 function lmCityModels(){if(!gltfL)return;for(const id in LM_CITY){if(LM_CITY[id]!==REGION.id||!MODEL_IDX[id])continue;if(MODELS[id])lmApplyModel(id);else fetchModel(id)}}
 function lmApplyModel(id){
@@ -4231,8 +4323,9 @@ function prepModel(id,sc,h){
 function modelInst(id,opt={}){
   const m=modelReady(id);if(!m)return null;const ry=(MODEL_IDX[id]&&MODEL_IDX[id].ry)||0,q=Math.abs(Math.round(ry/(Math.PI/2)))%2===1;
   const inner=m.scene.clone(true);inner.rotation.y=ry;let s=m.k;
-  if(opt.fit){const [w,h,d]=opt.fit,sx=q?m.size.z:m.size.x,sz=q?m.size.x:m.size.z;s=Math.min(w/(sx||1),h/(m.size.y||1),d/(sz||1))}
-  inner.scale.setScalar(s*(opt.scale||1));
+  if(opt.fit){const [w,h,d]=opt.fit,sx=q?m.size.z:m.size.x,sz=q?m.size.x:m.size.z;s=Math.min(w/(sx||1),h/(m.size.y||1),d/(sz||1));
+    if(opt.stretch){const kx=w/(sx||1),ky=h/(m.size.y||1),kz=d/(sz||1);inner.scale.set(q?kz:kx,ky,q?kx:kz)}}
+  if(!(opt.fit&&opt.stretch))inner.scale.setScalar(s*(opt.scale||1));
   if(opt.ownMat){const mats=[];inner.traverse(o=>{if(o.isMesh){o.material=Array.isArray(o.material)?o.material.map(x=>x.clone()):o.material.clone();(Array.isArray(o.material)?o.material:[o.material]).forEach(x=>mats.push(x))}});inner.userData.mats=mats}
   const w=new THREE.Group();w.add(inner);w.userData.mats=inner.userData.mats||[];return w;
 }
