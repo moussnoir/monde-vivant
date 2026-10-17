@@ -393,7 +393,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.19 · Toutes les villes du monde en plan réel</div>
+    <div class="eyebrow">Version 0.20 · Monde ouvert : la vraie ville sans limite</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -989,7 +989,85 @@ function groundRect(mat,unit){const ext=TOTAL/2+350;let x0=-ext,x1=ext,z0=-ext,z
   if(mat.map)mat.map.repeat.set((x1-x0)/unit,(z1-z0)/unit);return m}
 function disposeGroup(gr){gr.traverse(o=>{if(o.isInstancedMesh&&o.dispose)o.dispose();if(o.userData.ownGeo&&o.geometry)o.geometry.dispose();if(o.userData.own){o.geometry&&o.geometry.dispose();if(o.material){o.material.map&&o.material.map.dispose();o.material.dispose()}}})}
 
-function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];
+// façade extrudée d'après le contour réel du bâtiment (OSM) : murs texturés étage par étage + toit plat
+function facadePoly(pts,y0,h,cellW,cellH){const n=pts.length,P=[],N=[],U=[],y1=y0+h;let a2=0;
+  for(let i=0;i<n;i++){const [x0,z0]=pts[i],[x1,z1]=pts[(i+1)%n];a2+=x0*z1-x1*z0}
+  let run=0;
+  for(let i=0;i<n;i++){const [x0,z0]=pts[i],[x1,z1]=pts[(i+1)%n],dx=x1-x0,dz=z1-z0,L=Math.hypot(dx,dz);if(L<0.05)continue;
+    let nx=-dz/L,nz=dx/L;const flip=a2>0;if(flip){nx=-nx;nz=-nz}
+    const u0=run/cellW/8,u1=(run+L)/cellW/8,v1=h/cellH/8;run+=L;
+    const A=[x0,y0,z0,u0,0],B=[x1,y0,z1,u1,0],C=[x1,y1,z1,u1,v1],D=[x0,y1,z0,u0,v1];
+    const tris=flip?[A,C,B,A,D,C]:[A,B,C,A,C,D];
+    for(const v of tris){P.push(v[0],v[1],v[2]);N.push(nx,0,nz);U.push(v[3],v[4])}}
+  const ix=THREE.ShapeUtils.triangulateShape(pts.map(p=>new THREE.Vector2(p[0],p[1])),[]);
+  for(const [i0,i1,i2] of ix){let a=pts[i0],b=pts[i1],c=pts[i2];if((b[1]-a[1])*(c[0]-a[0])-(b[0]-a[0])*(c[1]-a[1])<0){const t=b;b=c;c=t}
+    for(const v of [a,b,c]){P.push(v[0],y1,v[1]);N.push(0,1,0);U.push(0.004,0.996)}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));return g}
+// style de façade selon l'usage réel : bureaux et tours en verre, industrie en brique, sinon le style de la région
+function osmStyle(kind,h,base,r,pal,colr){if(kind===4||h>(base==='cotonou'?30:48))return 'glass';if(kind===5&&base!=='cotonou')return 'brick';
+  if(colr&&base!=='cotonou'){const c=String(colr).toLowerCase();if(/brick|red|brown|#8|#9|#a0|#b0/.test(c))return 'brick';if(/glass|blue|#9fc|#acd/.test(c))return 'glass'}
+  return pal[Math.floor(r*pal.length)][0]}
+function facadeBox(x,y,z,w,h,d,cellW,cellH){
+  const g=new THREE.BoxGeometry(w,h,d); g.translate(0,h/2,0);
+  const uv=g.attributes.uv, dims=[[d,h],[d,h],[0,0],[0,0],[w,h],[w,h]];
+  for(let f=0;f<6;f++)for(let k=0;k<4;k++){const i=f*4+k,[fw,fh]=dims[f];if(!fw){uv.setXY(i,0.004,0.996);continue}uv.setXY(i,uv.getX(i)*fw/cellW/8,uv.getY(i)*fh/cellH/8)}
+  g.translate(x,y,z); return g;
+}
+function osmBuild(O,ctx){const T2=TOTAL/2+6,base=REGION.base,{paint,gravel,metal,wall,roof,conc,wood,glow}=ctx.b,facGeo=ctx.facGeo,addCol=ctx.col,newDoors=[];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const inQ=(x,z)=>Math.abs(x)<T2&&Math.abs(z)<T2;
+  const wet=(x,z)=>{if(!ENV||ENV.kind==='none')return false;const o=((ENV.ax==='z'?z:x)-ENV.edge)*ENV.sg;return ENV.kind==='ocean'?o>-4:(o>-4&&o<ENV.width+12)};
+  const hh=(x,z)=>(((Math.round(x*7)*73856093)^(Math.round(z*7)*19349663))>>>0)/4294967296;
+  // routes
+  for(const [cls,wd,ni,surf,pts] of O.r){const dirt=/unpaved|dirt|ground|sand|earth|compacted|gravel/.test(surf)||(base==='cotonou'&&cls>=3&&surf!=='asphalt'&&surf!=='paved'),col=cls>=6?'#9a958c':dirt?'#a8673f':'#3f4245',w=Math.max(1.5,wd);
+    for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],mx=(x0+x1)/2,mz=(z0+z1)/2,L=Math.hypot(x1-x0,z1-z0);if(L<0.2||inQ(mx,mz)||wet(mx,mz))continue;
+      const a=Math.atan2(z1-z0,x1-x0);paint.add(mx,0.012+cls*0.001,mz,L+0.02,0.03,w,col,0,-a,0);
+      if(!inQ(x1,z1))paint.add(x1,0.012+cls*0.001,z1,w,0.03,w,col,0,-a,0);
+      if(cls<=2&&L>8&&!dirt)for(let t=4;t<L-2;t+=9){const px=x0+(x1-x0)*t/L,pz=z0+(z1-z0)*t/L;paint.add(px,0.05,pz,3,0.004,0.14,'#e6e0cf',0,-a,0)}}}
+  // voies ferrées
+  for(const pts of O.rl)for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],mx=(x0+x1)/2,mz=(z0+z1)/2,L=Math.hypot(x1-x0,z1-z0);if(inQ(mx,mz))continue;const a=Math.atan2(z1-z0,x1-x0),nx=-Math.sin(a),nz=Math.cos(a);
+    gravel.add(mx,0,mz,L,0.12,3.2,'#8f877c',0,-a,0);for(const s of [-0.72,0.72])metal.add(mx+nx*s,0.12,mz+nz*s,L,0.14,0.1,'#6b6f73',0,-a,0)}
+  // parcs, eau
+  const poly=(pts,mat,y)=>{if(pts.length<4)return;const sh=new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ShapeGeometry(sh);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,mat);m.position.y=y;m.receiveShadow=true;m.userData.ownGeo=true;ctx.grp.add(m);return m};
+  for(const [k,pts] of O.p){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,MAT.lawn,0.03)}
+  for(const pts of O.w){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,WATER,0.04)}
+  // grille des routes (pour orienter les portes)
+  const RG={},rk=(x,z)=>Math.floor(x/20)+','+Math.floor(z/20);
+  for(const [cls,wd,ni,surf,pts] of O.r){if(cls>=6)continue;for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],L=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.ceil(L/8));
+    for(let k=0;k<=n;k++){const x=x0+(x1-x0)*k/n,z=z0+(z1-z0)*k/n;(RG[rk(x,z)]=RG[rk(x,z)]||[]).push([x,z,ni])}}}
+  const nearRoad=(x,z)=>{let best=1e9,ni=-1;const gx=Math.floor(x/20),gz=Math.floor(z/20);for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)for(const p of (RG[(gx+i)+','+(gz+j)]||[])){const d=Math.hypot(p[0]-x,p[1]-z);if(d<best){best=d;ni=p[2]}}return [best,ni]};
+  // bâtiments
+  const pal={cotonou:[['afr',0],['afr2',0]],paris:[['paris',0]],newyork:[['ny',0],['brick',0],['glass',0]],tokyo:[['tokyo',0],['glass',0]]}[base]||[['afr',0]];
+  let n=0;
+  for(const [cx,cz,w,d,a,h0,kind,fill,colr,bn,shp] of O.b){if(inQ(cx,cz)||wet(cx,cz)||lmNear(cx,cz,8))continue;
+    const r=hh(cx,cz);let h=h0;
+    if(!h){h=base==='cotonou'?(kind===2||kind===3?7+r*9:kind===7?2.6:3.3+(r<0.35?3.1:0)+(r<0.08?3.1:0)):base==='paris'?15+r*8:base==='newyork'?12+r*r*60:9+r*24}
+    h=Math.max(2.6,Math.min(h,320));
+    const small=kind===7||(base==='cotonou'&&h<4.5&&w*d<120);
+    if(small){const c=colr||pick(['#e8dcc4','#d9cbb0','#cfd8d4','#efe6c8','#e6d2c0']);wall.add(cx,0,cz,w,h,d,c,0,-a,0);roof.add(cx,h,cz,w+0.5,0.08,d+0.5,pick(['#9aa0a6','#8a6a4a','#a65a3a']),0,-a,0)}
+    else{const key=osmStyle(kind,h,base,r,pal,colr),cw=key==='glass'?2.4:3.2;
+      if(shp&&shp.length>=5){(facGeo[key]=facGeo[key]||[]).push(facadePoly(shp.map(p=>[cx+p[0],cz+p[1]]),0,h,cw,3.1))}
+      else{const g=facadeBox(0,0,0,w,h,d,cw,3.1);g.rotateY(-a);g.translate(cx,0,cz);(facGeo[key]=facGeo[key]||[]).push(g);
+        if(base==='cotonou')conc.add(cx,h,cz,w+0.1,0.6,d+0.1,'#d9d2c4',0,-a,0)}}
+    // collisions : petits carrés le long du grand côté
+    const Lg=Math.max(w,d),S=Math.min(w,d),ux=Math.cos(a)*(w>=d?1:0)-Math.sin(a)*(w>=d?0:1),uz=Math.sin(a)*(w>=d?1:0)+Math.cos(a)*(w>=d?0:1),k=Math.max(1,Math.ceil(Lg/S));
+    for(let i=0;i<k;i++){const t=-Lg/2+S/2+(Lg-S)*(k>1?i/(k-1):0.5),px=cx+ux*t,pz=cz+uz*t,e=S*0.5*(Math.abs(Math.cos(a))+Math.abs(Math.sin(a)))*0.86;addCol(px-e,pz-e,px+e,pz+e)}
+    // porte côté rue
+    {const ca=Math.cos(a),sa=Math.sin(a);let bestF=null;
+      for(const [u,v,hw] of [[w/2,0,d],[-w/2,0,d],[0,d/2,w],[0,-d/2,w]]){const ln=Math.hypot(u,v),nx=(u*ca-v*sa)/ln,nz=(u*sa+v*ca)/ln,fx=cx+u*ca-v*sa,fz=cz+u*sa+v*ca,[dr,ni]=nearRoad(fx+nx*3,fz+nz*3);
+        if(hw>=2.2&&(!bestF||dr<bestF.dr))bestF={dr,ni,nx,nz,fx,fz}}
+      if(bestF){const {nx,nz,fx,fz}=bestF,ry=Math.atan2(nx,nz);wood.add(fx+nx*0.06,0,fz+nz*0.06,1.3,2.25,0.12,'#4a3426',0,ry,0);glow.add(fx+nx*0.25,2.45,fz+nz*0.25,0.5,0.12,0.25,'#ffffff',0,ry,0);
+        const floors=Math.max(1,Math.round(h/3.1)),area=w*d,res=kind===2||(!small&&kind!==3&&kind!==4&&kind!==5&&kind!==6),shopG=kind===3||(base!=='cotonou'&&!small&&r<0.35&&floors>2);
+        const per=Math.max(1,Math.min(16,Math.round(area*0.72/72))),street=bestF.ni>=0&&O.n[bestF.ni]?O.n[bestF.ni]:'',num=1+Math.floor(r*120);
+        newDoors.push({x:fx+nx*1.5,z:fz+nz*1.5,cx,cz,nx,nz,floors,per,kind,small,res,shopG,bname:bn||'',seed:Math.floor(r*1e9)+n,addr:(street?num+' '+street:'Bâtiment n° '+(n+1))})}}
+    n++}
+  for(const d of newDoors)OSMDOORS.push(d);osmGrid();osmAttachPOI(O,newDoors,!ctx.first);
+  // enseignes lumineuses au-dessus des portes des commerces et centres commerciaux
+  for(const dd of newDoors){const P=dd.poi,com=P?!!poiInfo(P.t).k:dd.kind===3;if(!com)continue;const ry=Math.atan2(dd.nx,dd.nz),fx=dd.x-dd.nx*1.5,fz=dd.z-dd.nz*1.5,mall=P&&P.t==='mall',col=P?poiInfo(P.t).c:'#e0803a';
+    glow.add(fx+dd.nx*0.2,mall?5.2:2.75,fz+dd.nz*0.2,mall?7:2.6,mall?1.3:0.55,0.12,col,0,ry,0);
+    if(!mall)metal.add(fx+dd.nx*0.6,2.45,fz+dd.nz*0.6,3,0.08,1.1,col,0,ry,0)}console.log('OSM',O.city||O.tile,n,'bâtiments',newDoors.length,'portes',OSMPOI.length,'lieux');return n;
+}
+function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];TILES={};TGEN++;TILEV++;
   seed=newSeed; R=mulberry32(seed);
   closeAllBld(); BLD=[]; if(drive){scene.remove(drive.mesh);drive=null} seat=null; curFloor=null; for(const m of mons)scene.remove(m.g); mons=[]; for(const p of projs)scene.remove(p.mesh); projs=[];
   if(world){scene.remove(world);disposeGroup(world)}
@@ -1018,59 +1096,7 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];
 
 
   /* ---------- Ville réelle (OpenStreetMap) autour du quartier ---------- */
-  function osmLayer(){const O=OSMD,T2=TOTAL/2+6,base=REGION.base;
-    const inQ=(x,z)=>Math.abs(x)<T2&&Math.abs(z)<T2;
-    const wet=(x,z)=>{if(!ENV||ENV.kind==='none')return false;const o=((ENV.ax==='z'?z:x)-ENV.edge)*ENV.sg;return ENV.kind==='ocean'?o>-4:(o>-4&&o<ENV.width+12)};
-    const hh=(x,z)=>(((Math.round(x*7)*73856093)^(Math.round(z*7)*19349663))>>>0)/4294967296;
-    // routes
-    for(const [cls,wd,ni,surf,pts] of O.r){const dirt=/unpaved|dirt|ground|sand|earth|compacted|gravel/.test(surf)||(base==='cotonou'&&cls>=3&&surf!=='asphalt'&&surf!=='paved'),col=cls>=6?'#9a958c':dirt?'#a8673f':'#3f4245',w=Math.max(1.5,wd);
-      for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],mx=(x0+x1)/2,mz=(z0+z1)/2,L=Math.hypot(x1-x0,z1-z0);if(L<0.2||inQ(mx,mz)||wet(mx,mz))continue;
-        const a=Math.atan2(z1-z0,x1-x0);paint.add(mx,0.012+cls*0.001,mz,L+0.02,0.03,w,col,0,-a,0);
-        if(!inQ(x1,z1))paint.add(x1,0.012+cls*0.001,z1,w,0.03,w,col,0,-a,0);
-        if(cls<=2&&L>8&&!dirt)for(let t=4;t<L-2;t+=9){const px=x0+(x1-x0)*t/L,pz=z0+(z1-z0)*t/L;paint.add(px,0.05,pz,3,0.004,0.14,'#e6e0cf',0,-a,0)}}}
-    // voies ferrées
-    for(const pts of O.rl)for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],mx=(x0+x1)/2,mz=(z0+z1)/2,L=Math.hypot(x1-x0,z1-z0);if(inQ(mx,mz))continue;const a=Math.atan2(z1-z0,x1-x0),nx=-Math.sin(a),nz=Math.cos(a);
-      gravel.add(mx,0,mz,L,0.12,3.2,'#8f877c',0,-a,0);for(const s of [-0.72,0.72])metal.add(mx+nx*s,0.12,mz+nz*s,L,0.14,0.1,'#6b6f73',0,-a,0)}
-    // parcs, eau
-    const poly=(pts,mat,y)=>{if(pts.length<4)return;const sh=new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ShapeGeometry(sh);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,mat);m.position.y=y;m.receiveShadow=true;m.userData.ownGeo=true;world.add(m);return m};
-    for(const [k,pts] of O.p){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,MAT.lawn,0.03)}
-    for(const pts of O.w){const c=pts.reduce((a,p)=>[a[0]+p[0]/pts.length,a[1]+p[1]/pts.length],[0,0]);if(inQ(c[0],c[1]))continue;poly(pts,WATER,0.04)}
-    // grille des routes (pour orienter les portes)
-    const RG={},rk=(x,z)=>Math.floor(x/20)+','+Math.floor(z/20);
-    for(const [cls,wd,ni,surf,pts] of O.r){if(cls>=6)continue;for(let i=0;i<pts.length-1;i++){const [x0,z0]=pts[i],[x1,z1]=pts[i+1],L=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.ceil(L/8));
-      for(let k=0;k<=n;k++){const x=x0+(x1-x0)*k/n,z=z0+(z1-z0)*k/n;(RG[rk(x,z)]=RG[rk(x,z)]||[]).push([x,z,ni])}}}
-    const nearRoad=(x,z)=>{let best=1e9,ni=-1;const gx=Math.floor(x/20),gz=Math.floor(z/20);for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)for(const p of (RG[(gx+i)+','+(gz+j)]||[])){const d=Math.hypot(p[0]-x,p[1]-z);if(d<best){best=d;ni=p[2]}}return [best,ni]};
-    // bâtiments
-    const pal={cotonou:[['afr',0],['afr2',0]],paris:[['paris',0]],newyork:[['ny',0],['brick',0],['glass',0]],tokyo:[['tokyo',0],['glass',0]]}[base]||[['afr',0]];
-    let n=0;
-    for(const [cx,cz,w,d,a,h0,kind,fill,colr,bn,shp] of O.b){if(inQ(cx,cz)||wet(cx,cz)||lmNear(cx,cz,8))continue;
-      const r=hh(cx,cz);let h=h0;
-      if(!h){h=base==='cotonou'?(kind===2||kind===3?7+r*9:kind===7?2.6:3.3+(r<0.35?3.1:0)+(r<0.08?3.1:0)):base==='paris'?15+r*8:base==='newyork'?12+r*r*60:9+r*24}
-      h=Math.max(2.6,Math.min(h,320));
-      const small=kind===7||(base==='cotonou'&&h<4.5&&w*d<120);
-      if(small){const c=colr||pick(['#e8dcc4','#d9cbb0','#cfd8d4','#efe6c8','#e6d2c0']);wall.add(cx,0,cz,w,h,d,c,0,-a,0);roof.add(cx,h,cz,w+0.5,0.08,d+0.5,pick(['#9aa0a6','#8a6a4a','#a65a3a']),0,-a,0)}
-      else{const key=osmStyle(kind,h,base,r,pal,colr),cw=key==='glass'?2.4:3.2;
-        if(shp&&shp.length>=5){(facGeo[key]=facGeo[key]||[]).push(facadePoly(shp.map(p=>[cx+p[0],cz+p[1]]),0,h,cw,3.1))}
-        else{const g=facadeBox(0,0,0,w,h,d,cw,3.1);g.rotateY(-a);g.translate(cx,0,cz);(facGeo[key]=facGeo[key]||[]).push(g);
-          if(base==='cotonou')conc.add(cx,h,cz,w+0.1,0.6,d+0.1,'#d9d2c4',0,-a,0)}}
-      // collisions : petits carrés le long du grand côté
-      const Lg=Math.max(w,d),S=Math.min(w,d),ux=Math.cos(a)*(w>=d?1:0)-Math.sin(a)*(w>=d?0:1),uz=Math.sin(a)*(w>=d?1:0)+Math.cos(a)*(w>=d?0:1),k=Math.max(1,Math.ceil(Lg/S));
-      for(let i=0;i<k;i++){const t=-Lg/2+S/2+(Lg-S)*(k>1?i/(k-1):0.5),px=cx+ux*t,pz=cz+uz*t,e=S*0.5*(Math.abs(Math.cos(a))+Math.abs(Math.sin(a)))*0.86;addCol(px-e,pz-e,px+e,pz+e)}
-      // porte côté rue
-      {const ca=Math.cos(a),sa=Math.sin(a);let bestF=null;
-        for(const [u,v,hw] of [[w/2,0,d],[-w/2,0,d],[0,d/2,w],[0,-d/2,w]]){const ln=Math.hypot(u,v),nx=(u*ca-v*sa)/ln,nz=(u*sa+v*ca)/ln,fx=cx+u*ca-v*sa,fz=cz+u*sa+v*ca,[dr,ni]=nearRoad(fx+nx*3,fz+nz*3);
-          if(hw>=2.2&&(!bestF||dr<bestF.dr))bestF={dr,ni,nx,nz,fx,fz}}
-        if(bestF){const {nx,nz,fx,fz}=bestF,ry=Math.atan2(nx,nz);wood.add(fx+nx*0.06,0,fz+nz*0.06,1.3,2.25,0.12,'#4a3426',0,ry,0);glow.add(fx+nx*0.25,2.45,fz+nz*0.25,0.5,0.12,0.25,'#ffffff',0,ry,0);
-          const floors=Math.max(1,Math.round(h/3.1)),area=w*d,res=kind===2||(!small&&kind!==3&&kind!==4&&kind!==5&&kind!==6),shopG=kind===3||(base!=='cotonou'&&!small&&r<0.35&&floors>2);
-          const per=Math.max(1,Math.min(16,Math.round(area*0.72/72))),street=bestF.ni>=0&&O.n[bestF.ni]?O.n[bestF.ni]:'',num=1+Math.floor(r*120);
-          OSMDOORS.push({x:fx+nx*1.5,z:fz+nz*1.5,cx,cz,nx,nz,floors,per,kind,small,res,shopG,bname:bn||'',seed:Math.floor(r*1e9)+n,addr:(street?num+' '+street:'Bâtiment n° '+(n+1))})}}
-      n++}
-    osmGrid();osmAttachPOI(O);
-    // enseignes lumineuses au-dessus des portes des commerces et centres commerciaux
-    for(const dd of OSMDOORS){const P=dd.poi,com=P?!!poiInfo(P.t).k:dd.kind===3;if(!com)continue;const ry=Math.atan2(dd.nx,dd.nz),fx=dd.x-dd.nx*1.5,fz=dd.z-dd.nz*1.5,mall=P&&P.t==='mall',col=P?poiInfo(P.t).c:'#e0803a';
-      glow.add(fx+dd.nx*0.2,mall?5.2:2.75,fz+dd.nz*0.2,mall?7:2.6,mall?1.3:0.55,0.12,col,0,ry,0);
-      if(!mall)metal.add(fx+dd.nx*0.6,2.45,fz+dd.nz*0.6,3,0.08,1.1,col,0,ry,0)}console.log('OSM',O.city,n,'bâtiments',OSMDOORS.length,'portes',OSMPOI.length,'lieux');
-  }
+  function osmLayer(){osmBuild(OSMD,{grp:world,b,facGeo,col:addCol,first:true});farGround()}
   /* ---------- Cotonou : concessions ---------- */
   function cotonouLayout(){
     world.add(groundRect(GROUND_MAT,9));
@@ -1645,30 +1671,6 @@ function buildWorld(newSeed){KITP=[];KITCUR=null;OSMDOORS=[];OSMG={};OSMPOI=[];
       movingBoat(E.boat,width*0.42,-2.3,E.boat==='ferry'?5:2.6,-60);
       if(E.boat!=='ferry') movingBoat(E.boat,width*0.7,-2.3,-2.0,140);
     }
-  }
-  // façade extrudée d'après le contour réel du bâtiment (OSM) : murs texturés étage par étage + toit plat
-  function facadePoly(pts,y0,h,cellW,cellH){const n=pts.length,P=[],N=[],U=[],y1=y0+h;let a2=0;
-    for(let i=0;i<n;i++){const [x0,z0]=pts[i],[x1,z1]=pts[(i+1)%n];a2+=x0*z1-x1*z0}
-    let run=0;
-    for(let i=0;i<n;i++){const [x0,z0]=pts[i],[x1,z1]=pts[(i+1)%n],dx=x1-x0,dz=z1-z0,L=Math.hypot(dx,dz);if(L<0.05)continue;
-      let nx=-dz/L,nz=dx/L;const flip=a2>0;if(flip){nx=-nx;nz=-nz}
-      const u0=run/cellW/8,u1=(run+L)/cellW/8,v1=h/cellH/8;run+=L;
-      const A=[x0,y0,z0,u0,0],B=[x1,y0,z1,u1,0],C=[x1,y1,z1,u1,v1],D=[x0,y1,z0,u0,v1];
-      const tris=flip?[A,C,B,A,D,C]:[A,B,C,A,C,D];
-      for(const v of tris){P.push(v[0],v[1],v[2]);N.push(nx,0,nz);U.push(v[3],v[4])}}
-    const ix=THREE.ShapeUtils.triangulateShape(pts.map(p=>new THREE.Vector2(p[0],p[1])),[]);
-    for(const [i0,i1,i2] of ix){let a=pts[i0],b=pts[i1],c=pts[i2];if((b[1]-a[1])*(c[0]-a[0])-(b[0]-a[0])*(c[1]-a[1])<0){const t=b;b=c;c=t}
-      for(const v of [a,b,c]){P.push(v[0],y1,v[1]);N.push(0,1,0);U.push(0.004,0.996)}}
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));return g}
-  // style de façade selon l'usage réel : bureaux et tours en verre, industrie en brique, sinon le style de la région
-  function osmStyle(kind,h,base,r,pal,colr){if(kind===4||h>(base==='cotonou'?30:48))return 'glass';if(kind===5&&base!=='cotonou')return 'brick';
-    if(colr&&base!=='cotonou'){const c=String(colr).toLowerCase();if(/brick|red|brown|#8|#9|#a0|#b0/.test(c))return 'brick';if(/glass|blue|#9fc|#acd/.test(c))return 'glass'}
-    return pal[Math.floor(r*pal.length)][0]}
-  function facadeBox(x,y,z,w,h,d,cellW,cellH){
-    const g=new THREE.BoxGeometry(w,h,d); g.translate(0,h/2,0);
-    const uv=g.attributes.uv, dims=[[d,h],[d,h],[0,0],[0,0],[w,h],[w,h]];
-    for(let f=0;f<6;f++)for(let k=0;k<4;k++){const i=f*4+k,[fw,fh]=dims[f];if(!fw){uv.setXY(i,0.004,0.996);continue}uv.setXY(i,uv.getX(i)*fw/cellW/8,uv.getY(i)*fh/cellH/8)}
-    g.translate(x,y,z); return g;
   }
   function streetFurniture(x0,x1,z0,z1,bi,bj,SWD){
     const st=REGION.style;
@@ -2542,7 +2544,7 @@ function paintBase(g,X,Z,k,W,H,fs,opt){
   if(ENV){const e=ENV.edge,s=ENV.sg;
     if(ENV.kind==='ocean'){g.fillStyle=M.sand;rect(-ext*3,e,ext*3,e+s*21);g.fillStyle=M.water;rect(-ext*3,e+s*21,ext*3,e+s*3000)}
     else{g.fillStyle=M.water;if(ENV.ax==='z')rect(-ext*3,e,ext*3,e+s*ENV.width);else rect(e,-ext*3,e+s*ENV.width,ext*3)}}
-  if(OSMD){const O=OSMD,q=TOTAL/2+6,inQ=(x,z)=>Math.abs(x)<q&&Math.abs(z)<q,poly=(pts)=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p[0]),Z(p[1])):g.moveTo(X(p[0]),Z(p[1])));g.closePath();g.fill()};
+  for(const O of osmSets()){const q=TOTAL/2+6,inQ=(x,z)=>Math.abs(x)<q&&Math.abs(z)<q,poly=(pts)=>{g.beginPath();pts.forEach((p,i)=>i?g.lineTo(X(p[0]),Z(p[1])):g.moveTo(X(p[0]),Z(p[1])));g.closePath();g.fill()};
     g.fillStyle='#6f9a55';for(const [kk,pts] of O.p)poly(pts);g.fillStyle=M.water;for(const pts of O.w)poly(pts);
     g.lineCap='round';g.lineJoin='round';
     for(const [cls,wd,ni,surf,pts] of O.r){if(cls>=6&&k<1.2)continue;g.strokeStyle=cls>=6?M.street+'99':cls<=2?M.avenue:M.street;g.lineWidth=Math.max(cls>=6?0.8:1.5,wd*k);g.beginPath();let on=false;
@@ -2581,7 +2583,11 @@ function drawMinimap(){
   const L2=mapLayer, P=dolly.position, mPer=110, src=mPer*L2.k, sx=(P.x+L2.ext)*L2.k, sz=(P.z+L2.ext)*L2.k;
   g.save(); g.beginPath(); g.arc(S/2,S/2,S/2,0,7); g.clip();
   g.fillStyle=REGION.mapc.ground; g.fillRect(0,0,S,S);
-  g.drawImage(L2.c,sx-src/2,sz-src/2,src,src,0,0,S,S);
+  if(OSMD){const M2=drawMinimap.c||(drawMinimap.c=document.createElement('canvas')),k=S/mPer;
+    if(!drawMinimap.at||Math.hypot(drawMinimap.at[0]-P.x,drawMinimap.at[1]-P.z)>4||drawMinimap.at[2]!==TILEV||drawMinimap.at[3]!==mapLayer.id){M2.width=M2.height=S+80;const cx=P.x,cz=P.z;
+      paintBase(M2.getContext('2d'),x=>(x-cx)*k+(S+80)/2,z=>(z-cz)*k+(S+80)/2,k,S+80,S+80,1,{ext:L2.ext,layer:true});drawMinimap.at=[cx,cz,TILEV,mapLayer.id]}
+    const a=drawMinimap.at;g.drawImage(M2,(a[0]-P.x)*k-40,(a[1]-P.z)*k-40)}
+  else g.drawImage(L2.c,sx-src/2,sz-src/2,src,src,0,0,S,S);
   const sc=S/mPer;
   g.fillStyle='rgba(240,240,240,.85)'; for(const c of traffic){const x=S/2+(c.px-P.x)*sc,y=S/2+(c.pz-P.z)*sc;if(x<0||y<0||x>S||y>S)continue;g.fillRect(x-3,y-3,6,6)}
   for(const n of npcs){if(!n.g.visible||n.inside)continue;const x=S/2+(n.pos.x-P.x)*sc,y=S/2+(n.pos.z-P.z)*sc;if(x<0||y<0||x>S||y>S)continue;g.fillStyle='#7cc47a';g.beginPath();g.arc(x,y,4,0,7);g.fill()}
@@ -2596,7 +2602,7 @@ const MV={z:1,cx:0,cz:0,follow:true,key:'',base:null,W:0,H:0,k:1};
 function mvPlayer(){return inside?{x:outsideState.door.x,z:outsideState.door.z}:dolly.position}
 function mvFit(){const L2=mapLayer;return Math.min(MV.W,MV.H)/(2*L2.ext)}
 function mvSize(){const cv=$('#bigmap'),r=cv.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(200,Math.round(r.width*dpr)),h=Math.max(200,Math.round(r.height*dpr));if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}MV.W=w;MV.H=h;MV.dpr=dpr}
-function mvClamp(){const L2=mapLayer,kF=mvFit();MV.z=Math.max(0.8,Math.min(MV.z,14/kF));const e=L2.ext;MV.cx=Math.max(-e,Math.min(e,MV.cx));MV.cz=Math.max(-e,Math.min(e,MV.cz))}
+function mvClamp(){const L2=mapLayer,kF=mvFit();MV.z=Math.max(0.8,Math.min(MV.z,14/kF));const e=OSMD?L2.ext+TILE*6:L2.ext;MV.cx=Math.max(-e,Math.min(e,MV.cx));MV.cz=Math.max(-e,Math.min(e,MV.cz))}
 function drawBigMap(){
   if(!mapLayer) return; const cv=$('#bigmap'); mvSize(); const W2=MV.W,H2=MV.H,g=cv.getContext('2d');
   if(MV.follow){const P=mvPlayer();MV.cx=P.x;MV.cz=P.z;if(MV.z<=1.01){MV.cx=0;MV.cz=0}}
@@ -3031,7 +3037,12 @@ function spawnPlayer(){
   pitch=-0.02;
 }
 const inIsland=(x,z)=>ISLANDS.some(q=>x>q[0]&&x<q[2]&&z>q[1]&&z<q[3]);
-function blocked(x,z){const r=0.3,lim=TOTAL/2+200;if(Math.abs(x)>lim||Math.abs(z)>lim)return true;if(!inside){const y=dolly.position.y;for(const b of STATIC_COLS)if(b[4]<y+1.6&&b[5]>y+0.35&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true}for(const b of cols)if(!b.off&&!(b.water&&inIsland(x,z))&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true;
+// grille spatiale des collisions de la ville (des dizaines de milliers de bâtiments avec le monde ouvert)
+let CG=null,CGref=null,CGn=-1;const CGS=16;
+function colsNear(x,z){if(CGref!==worldCols||CGn!==worldCols.length){CG=new Map();CG.big=[];for(const c of worldCols){const i0=Math.floor(c[0]/CGS),i1=Math.floor(c[2]/CGS),j0=Math.floor(c[1]/CGS),j1=Math.floor(c[3]/CGS);
+    if((i1-i0+1)*(j1-j0+1)>64){CG.big.push(c);continue}for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const k=i*100003+j;let a=CG.get(k);if(!a)CG.set(k,a=[]);a.push(c)}}CGref=worldCols;CGn=worldCols.length}
+  const a=CG.get(Math.floor(x/CGS)*100003+Math.floor(z/CGS));return a?a.concat(CG.big):CG.big}
+function blocked(x,z){const r=0.3,lim=OSMD?1e7:TOTAL/2+200;if(Math.abs(x)>lim||Math.abs(z)>lim)return true;if(!inside){const y=dolly.position.y;for(const b of STATIC_COLS)if(b[4]<y+1.6&&b[5]>y+0.35&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true}for(const b of (cols===worldCols&&!inside?colsNear(x,z):cols))if(!b.off&&!(b.water&&inIsland(x,z))&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true;
   if(!inside&&dynCols.length){const y=dolly.position.y;for(const b of dynCols)if(b[4]<y+1.6&&b[5]>y+0.35&&x>b[0]-r&&x<b[2]+r&&z>b[1]-r&&z<b[3]+r)return true}return false}
 function movePlayer(mx,mz,speed,dt){const len=Math.hypot(mx,mz);if(len<0.01)return;const k=speed*dt/Math.max(1,len);const nx=dolly.position.x+mx*k,nz=dolly.position.z+mz*k;if(!blocked(nx,dolly.position.z))dolly.position.x=nx;if(!blocked(dolly.position.x,nz))dolly.position.z=nz}
 addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON'&&(e.code==='Space'||e.code==='Enter'))return;keys.add(e.code);if(e.code==='KeyE')doorAction();if(e.code==='KeyF')attack();if(e.code==='KeyR')cycleWeapon()});
@@ -4999,7 +5010,7 @@ function loop(){
   {const P=dolly.position; if(inside)P.y=0; else if(drive){} else{const g=groundY(P.x,P.z,P.y); if(g>P.y)P.y+=(g-P.y)*Math.min(1,dt*18); else P.y=Math.max(g,P.y-7*dt)}}
   hudT-=dt;
   if(hudT<=0){
-    hudT=0.5; refreshOffset(); $('#clock').textContent=fmtTime(simTime);
+    hudT=0.5; refreshOffset(); $('#clock').textContent=fmtTime(simTime); tilesTick();
     const wl=weatherLabel(REGION); $('#weather').textContent=wl+' · '+tempAt(REGION)+' °C';
     $('#wx-ico').innerHTML=WX_ICO[wl==='Pluie'?'rain':wl==='Nuageux'?'cloudy':wl==='Nuit claire'?'night':'clear'];
     $('#speedtxt').textContent=timeScale===1?'Heure réelle':'×'+timeScale;
@@ -5336,19 +5347,48 @@ const POI={mall:{l:'Centre commercial',c:'#e0803a',k:'alim',g:'Commerces'},super
   hotel:{l:'Hôtel',c:'#5aa0e6',g:'Services'},stadium:{l:'Stade',c:'#7cc47a',g:'Culture'},sports_centre:{l:'Salle de sport',c:'#7cc47a',g:'Culture'}};
 const poiInfo=t=>POI[t]||(t&&t.startsWith('shop:')?{l:'Boutique',c:'#e0803a',k:'alim',g:'Commerces'}:{l:'Lieu',c:'#cfc4ae',g:'Services'});
 let OSMPOI=[];
-function osmAttachPOI(O){OSMPOI=[];
+function osmAttachPOI(O,doors,append){if(!append)OSMPOI=[];doors=doors||OSMDOORS;
   for(const [t,n,x,z,ad] of (O.am||[])){const p={t,n,x,z,ad};OSMPOI.push(p);
     let best=null,bd=1e9;for(const d of osmNear(x,z).concat(osmNear(x+12,z),osmNear(x-12,z),osmNear(x,z+12),osmNear(x,z-12))){const dd=Math.hypot((d.cx??d.x)-x,(d.cz??d.z)-z);if(dd<bd){bd=dd;best=d}}
     if(best&&bd<34&&(!best.poi||(t==='mall'&&best.poi.t!=='mall'))){best.poi=p;p.door=best}}
   // bâtiments nommés sans point d'intérêt : un centre commercial OSM taggé seulement sur le bâtiment
-  for(const d of OSMDOORS)if(!d.poi&&d.bname&&d.kind===3){const p={t:/mall|centre|center|plaza|shopping|galerie/i.test(d.bname)?'mall':'supermarket',n:d.bname,x:d.cx??d.x,z:d.cz??d.z,ad:'',door:d};d.poi=p;OSMPOI.push(p)}}
+  for(const d of doors)if(!d.poi&&d.bname&&d.kind===3){const p={t:/mall|centre|center|plaza|shopping|galerie/i.test(d.bname)?'mall':'supermarket',n:d.bname,x:d.cx??d.x,z:d.cz??d.z,ad:'',door:d};d.poi=p;OSMPOI.push(p)}}
 function osmMall(d){const P=d.poi,R=mulberry32(osmH(d.seed,77)),list=[];
   const kinds=REGION.shops.map(s=>s.kind);const n=6+Math.floor(R()*6);
   for(let i=0;i<n;i++){const sh=REGION.shops[(i+Math.floor(R()*kinds.length))%REGION.shops.length];list.push({kind:sh.kind,name:sh.names[Math.floor(R()*sh.names.length)],lvl:i<3?'RDC':'Niveau '+(1+Math.floor((i-3)/3))})}
   sheet(P.n||'Centre commercial',`<p style="margin:0;color:var(--muted);font-size:13.5px">Centre commercial · ${P.ad||d.addr}. ${n} boutiques ouvertes. Choisissez où entrer.</p>
     <ul class="lst">${list.map((b,i)=>`<li class="it"><div class="tx"><b>${b.name}</b><span>${b.lvl}</span></div><button class="btn" type="button" data-mb="${i}">Entrer</button></li>`).join('')}</ul>`);
   $('#sh-body').querySelectorAll('[data-mb]').forEach(b=>b.onclick=()=>{const s=list[+b.dataset.mb];closeSheet();enterInterior(osmShop(d,s.kind,s.name+' · '+(P.n||'Centre commercial')))})}
-window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor});
+/* ---- Monde ouvert : la ville réelle se charge par tuiles de 600 m autour du joueur, sans limite ---- */
+const TILE=600;let TILES={},TGEN=0,TILEV=0,tileBusy=false;const tileFail={};
+function osmSets(){const a=OSMD?[OSMD]:[];for(const k in TILES)if(TILES[k].data)a.push(TILES[k].data);return a}
+function farGround(){const big=30000,mat=REGION.base==='cotonou'?GROUND_MAT:ASPH_MAT,m2=mat.clone();m2.map=mat.map.clone();m2.map.needsUpdate=true;m2.map.repeat.set(big/(REGION.base==='cotonou'?9:6),big/(REGION.base==='cotonou'?9:6));
+  const E=REGION.env,add=(x0,x1,z0,z1)=>{if(x1<=x0||z1<=z0)return;const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,m2);m.position.set((x0+x1)/2,-0.04,(z0+z1)/2);m.receiveShadow=true;m.userData.own=true;world.add(m)};
+  const H=big/2;if(!ENV||E.water==='none'){add(-H,H,-H,H);return}
+  const e=ENV.edge,sg=ENV.sg,far=ENV.kind==='ocean'?null:e+sg*ENV.width;
+  if(ENV.ax==='z'){if(sg>0){add(-H,H,-H,e);if(far!=null)add(-H,H,far,H)}else{add(-H,H,e,H);if(far!=null)add(-H,H,-H,far)}}
+  else{if(sg>0){add(-H,e,-H,H);if(far!=null)add(far,H,-H,H)}else{add(e,H,-H,H);if(far!=null)add(-H,far,-H,H)}}}
+function tileBuild(data){const grp=new THREE.Group(),b=makeBatches(),facGeo={};
+  osmBuild(data,{grp,b,facGeo,col:(x0,z0,x1,z1)=>{const c=[Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)];worldCols.push(c);return c},first:false});
+  b.build(grp);for(const k in facGeo){const m=new THREE.Mesh(mergeGeos(facGeo[k]),FAC[k]);m.castShadow=HIGH;m.receiveShadow=true;m.userData.ownGeo=true;grp.add(m)}
+  world.add(grp);return grp}
+async function tilesTick(){if(!OSMD||inside||tileBusy||!world)return;const C=window.MV_CONFIG||{};if(C.osmBrowser===false&&!C.osmServer)return;
+  const P=dolly.position,R0=(OSMD.R||700)*1.05,ci=Math.round(P.x/TILE),cj=Math.round(P.z/TILE),now=Date.now();let best=null,bd=1e9;
+  for(let i=ci-2;i<=ci+2;i++)for(let j=cj-2;j<=cj+2;j++){const key=i+','+j;if(TILES[key]||(tileFail[key]||0)>now)continue;
+    const x0=i*TILE-TILE/2,x1=x0+TILE,z0=j*TILE-TILE/2,z1=z0+TILE;
+    if(Math.max(Math.hypot(x0,z0),Math.hypot(x1,z0),Math.hypot(x0,z1),Math.hypot(x1,z1))<=R0){TILES[key]={empty:true};continue}
+    const dx=Math.max(x0-P.x,0,P.x-x1),dz=Math.max(z0-P.z,0,P.z-z1),d=Math.hypot(dx,dz);if(d>650)continue;if(d<bd){bd=d;best={key,x0,x1,z0,z1}}}
+  if(!best)return;const gen=TGEN,city=osmKey(REGION),ik='tile:'+city+':'+best.key;tileBusy=true;TILES[best.key]={loading:true};
+  try{let data=(await osmIDB.get(ik));data=data&&data.fmt===OSM_FMT?data.data:null;
+    if(!data){const ac=new AbortController(),to=setTimeout(()=>ac.abort(),C.osmTimeout||90000);
+      try{if(bd<60)toast('Chargement de la suite de la ville…');
+        if(C.osmServer){const r=await fetch(C.osmServer.replace(/\/+$/,'')+'/tile/'+city+'/'+best.key.replace(',','_')+'.json?lat='+(OSMD.lat??REGION.lat)+'&lon='+(OSMD.lon??REGION.lon),{signal:ac.signal});if(!r.ok)throw new Error('HTTP '+r.status);data=await r.json()}
+        else{const L=await import(new URL('lib/osm-lib.mjs',location.href).href);data=await L.buildTile({key:best.key,lat:OSMD.lat??REGION.lat,lon:OSMD.lon??REGION.lon,x0:best.x0,x1:best.x1,z0:best.z0,z1:best.z1,skipR:R0,signal:ac.signal})}}
+      finally{clearTimeout(to)}osmIDB.set(ik,{fmt:OSM_FMT,t:Date.now(),data})}
+    if(gen!==TGEN)return;const grp=tileBuild(data);TILES[best.key]={data,grp};TILEV++;if(mapOpen)MV.key=''}
+  catch(e){console.warn('Tuile OSM indisponible',best.key,e);if(gen===TGEN){delete TILES[best.key];tileFail[best.key]=Date.now()+45000}}
+  finally{tileBusy=false}}
+window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick});
 
 async function boot(){
   try{

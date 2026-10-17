@@ -8,6 +8,7 @@
 //   GET /osm/index.json         clés déjà en cache
 //   GET /osm/<clé>.json         plan d'une ville de models/world.json (ex. porto_novo_bj)
 //   GET /osm/<clé>.json?lat=..&lon=..   point libre (clé au choix, [a-z0-9_]+)
+//   GET /tile/<clé>/<i>_<j>.json?lat=..&lon=..   tuile de 600 m du monde ouvert autour de la ville
 //
 // Variables : PORT (8787), CACHE_DIR (./cache), OVERPASS_URLS, ALLOW_ORIGIN (*), RADIUS (700)
 import { createServer } from 'node:http';
@@ -15,7 +16,7 @@ import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildCity, cityKey } from './osm-lib.mjs';
+import { buildCity, buildTile, cityKey } from './osm-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORT = +process.env.PORT || 8787;
@@ -33,13 +34,13 @@ console.log(`${CITIES.size} villes connues, cache : ${CACHE}`);
 // une seule requête Overpass à la fois (les serveurs publics limitent le débit)
 let chain = Promise.resolve();
 const pending = new Map();
-function generate(key, lat, lon) {
+function generate(key, lat, lon, make) {
   if (pending.has(key)) return pending.get(key);
   const p = chain.then(async () => {
     const file = join(CACHE, key + '.json');
     if (existsSync(file)) return readFile(file, 'utf8');
     const t0 = Date.now();
-    const data = await buildCity({ key, lat, lon, R: RADIUS, log: m => console.log(`[${key}] ${m}`) });
+    const data = make ? await make() : await buildCity({ key, lat, lon, R: RADIUS, log: m => console.log(`[${key}] ${m}`) });
     const txt = JSON.stringify(data);
     await writeFile(file, txt);
     console.log(`[${key}] ✓ ${data.b.length} bâtiments, ${data.r.length} routes en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
@@ -62,8 +63,17 @@ createServer(async (req, res) => {
     const u = new URL(req.url, 'http://x');
     if (u.pathname === '/' || u.pathname === '/health') return send(res, 200, JSON.stringify({ ok: true, villes: CITIES.size, enCours: [...pending.keys()] }));
     if (u.pathname === '/osm/index.json') {
-      const idx = {}; for (const f of await readdir(CACHE)) if (f.endsWith('.json')) idx[f.slice(0, -5)] = 1;
+      const idx = {}; for (const f of await readdir(CACHE)) if (f.endsWith('.json') && !f.startsWith('tile_')) idx[f.slice(0, -5)] = 1;
       return send(res, 200, JSON.stringify(idx), undefined, { 'Cache-Control': 'no-cache' });
+    }
+    const t = /^\/tile\/([a-z0-9_]{2,80})\/(-?\d{1,4})_(-?\d{1,4})\.json$/.exec(u.pathname);
+    if (t) {
+      const [, city, i, j] = t, known = CITIES.get(city);
+      const lat = known ? known.lat : parseFloat(u.searchParams.get('lat')), lon = known ? known.lon : parseFloat(u.searchParams.get('lon'));
+      if (!(Math.abs(lat) <= 85 && Math.abs(lon) <= 180)) return send(res, 404, '{"error":"fournir ?lat=&lon="}');
+      const T = 600, x0 = +i * T - T / 2, z0 = +j * T - T / 2, key = `tile_${city}_${i}_${j}`;
+      const txt = await generate(key, lat, lon, () => buildTile({ key: `${i},${j}`, lat, lon, x0, z0, x1: x0 + T, z1: z0 + T, skipR: 735 }));
+      return send(res, 200, txt, undefined, { 'Cache-Control': 'public, max-age=604800' });
     }
     const m = /^\/osm\/([a-z0-9_]{2,80})\.json$/.exec(u.pathname);
     if (!m) return send(res, 404, '{"error":"introuvable"}');

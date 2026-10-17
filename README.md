@@ -36,7 +36,7 @@ Le jeu cherche d’abord `models/osm/<clé>.json` (clé = nom de ville normalis�
 - avec `osmServer` renseigné dans `config.js`, il le demande plutôt au serveur ;
 - en cas d’échec (Overpass saturé, hors ligne), il construit le quartier procédural habituel.
 
-Les bâtiments non rectangulaires (L, U, cours, tours rondes) sont extrudés d’après leur contour réel ; la façade dépend de l’usage (bureaux et tours en verre, industrie en brique, sinon le style de la région) et les commerces ont une enseigne lumineuse.
+Le monde est ouvert : au-delà du plan de départ, la ville réelle se charge par tuiles de 600 m autour du joueur (OpenStreetMap, gardées en cache), sur un sol sans limite. Les bâtiments non rectangulaires (L, U, cours, tours rondes) sont extrudés d’après leur contour réel ; la façade dépend de l’usage (bureaux et tours en verre, industrie en brique, sinon le style de la région) et les commerces ont une enseigne lumineuse.
 
 Chaque nuit, le workflow « Générer des plans OpenStreetMap » complète le dépôt : la première nuit il met à jour les plans existants (ajout des commerces, centres commerciaux et noms de bâtiments, plus Tokyo), ensuite il ajoute les 400 plus grandes villes manquantes à chaque passage, dans la limite de 700 Mo.
 
