@@ -2,7 +2,7 @@
 
 Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotonou, Paris, New York, Tokyo et plus de 7 200 villes du monde. Three.js (r128), sans build : un seul `index.html` et des ressources statiques.
 
-- `index.html` : le jeu (v0.24 : toute la Terre en continu, relief réel, monuments à leur vraie place, architecture de chaque pays)
+- `index.html` : le jeu (v0.25 : vol libre sur toute la Terre, nature réelle, 36 monuments à leur vraie place, architecture de chaque pays)
 - `config.js` : configuration de déploiement (URL du serveur de cartes)
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
@@ -33,7 +33,11 @@ La sauvegarde est stockée dans le navigateur (`localStorage`).
 
 - **Voyage continu** : on peut marcher ou rouler hors de la ville, de pays en pays. Le monde se « recentre » tous les 2,5 km : près d’une ville (moins de 6 km), on entre dans cette ville avec son quartier ; ailleurs, une région de passage (campagne, désert, montagne) charge OpenStreetMap et le relief autour du joueur. Un message signale chaque frontière franchie.
 - **Relief réel** : altitudes des tuiles Terrarium (AWS Open Data, ~38 m par pixel au zoom 12). Montagnes, collines et vallées autour de la ville, sol coloré selon le climat (désert, savane, forêt, toundra), l’altitude et la pente, neige en haut des sommets. Le quartier de départ reste plat ; routes, bâtiments, passants et voitures suivent le terrain. `terrain:false` dans `config.js` le désactive.
-- **Monuments à leur vraie place** : pyramides de Gizeh, tour Eiffel, Christ Rédempteur, Temple du Ciel… apparaissent à leurs coordonnées réelles quand on passe à moins de 6 km.
+- **Vol libre** : depuis « Voyager », une carte du monde zoomable (molette, deux doigts) permet de toucher n’importe quel point de la terre ferme et d’y atterrir.
+- **Nature réelle** : l’occupation du sol d’OpenStreetMap (tuiles OpenFreeMap au zoom 10 : forêts, champs, prairies, sable, roche, glace, zones humides, villes, lacs) colore le relief et place la végétation adaptée au climat : feuillus, sapins, palmiers, acacias de savane, cactus des déserts américains, buissons, roseaux et rochers. `landcover:false` / `vegetation:false` dans `config.js` les désactivent.
+- **Campagne vivante** : passants et voitures sur les routes hors des villes, plus rapides sur les nationales et autoroutes ; on ne peut plus gravir les parois trop raides.
+- **Monuments à leur vraie place** (36) : les modèles 3D (Big Ben, Colisée, Grande Pyramide, Burj Khalifa…) et des monuments construits directement dans le jeu : Taj Mahal, Machu Picchu, Grande Muraille, Sagrada Família, tour de Pise, Pétra, Chichén Itzá, Stonehenge, Angkor Vat, Golden Gate, Sphinx et pyramides de Khéphren et Mykérinos, moaï de l’île de Pâques, tours Petronas, tour CN, Mont-Saint-Michel, mosquée de Djenné, porte du Non-Retour à Ouidah, basilique de Yamoussoukro, Grand Zimbabwe. Ils apparaissent quand on passe à moins de 6 km.
+- **Noms de rues** dans la langue du pays (russe, arabe, turc, persan, hindi, chinois, coréen, indonésien, vietnamien, thaï, swahili, grec, polonais, néerlandais, scandinave…).
 - **Architecture régionale** : façades, couleurs et toits selon la région du monde (maisons blanches à toits plats d’Afrique du Nord et du Moyen-Orient, tuiles méditerranéennes, barres soviétiques, couleurs vives d’Amérique latine, Inde, Chine, Asie du Sud-Est, toits à deux pentes en tôle, tuile ou ardoise…), pour les plans OpenStreetMap comme pour le quartier de départ.
 
 ## Plans OpenStreetMap
