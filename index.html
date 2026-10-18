@@ -417,7 +417,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.25 · Vol libre, nature réelle et 36 monuments du monde</div>
+    <div class="eyebrow">Version 0.26 · Mer réelle, météo en direct, saisons et passeport</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -3025,19 +3025,31 @@ function weatherLabel(reg){const w=weatherAt(reg),s=sunDir(simTime,reg);return w
 const C={nightTop:L('#050a1a'),nightHor:L('#1a2238'),dayTop:L('#4f8fd0'),dayHor:L('#c9dbe3'),dawnHor:L('#f0a46a'),dawnTop:L('#6a7fae'),rainTop:L('#5d6872'),rainHor:L('#9aa4ab')};
 const cT=new THREE.Color(),cH=new THREE.Color(); let dayF=1,nightF=0;
 const tmpV=new THREE.Vector3(),blobO=new THREE.Object3D();
+let LIVEW=null,snowF=0;
+async function liveWeather(R,force){const k=R.lat.toFixed(2)+','+R.lon.toFixed(2);if(!force&&LIVEW&&LIVEW.k===k&&Date.now()-LIVEW.t<20*60000)return;if((window.MV_CONFIG||{}).liveWeather===false)return;
+  try{const u='https://api.open-meteo.com/v1/forecast?latitude='+R.lat.toFixed(3)+'&longitude='+R.lon.toFixed(3)+'&current=temperature_2m,weather_code,cloud_cover,snow_depth,wind_speed_10m&timezone=GMT';
+    const j=await fetch(u).then(r=>r.json()),c=j.current;if(!c)return;LIVEW={k,t:Date.now(),temp:c.temperature_2m,code:c.weather_code,cloud:c.cloud_cover,snow:c.snow_depth||0,wind:c.wind_speed_10m,reg:R};TER.ver++}catch(e){}}
+const liveOn=reg=>reg===REGION&&LIVEW&&LIVEW.reg===REGION&&timeScale===1&&weatherMode==='auto'&&Math.abs(simTime-Date.now())<36e5;
+{const _w=weatherAt;weatherAt=function(reg){if(!liveOn(reg))return _w(reg);const c=LIVEW.code;
+  if((c>=71&&c<=77)||c===85||c===86)return 'snow';if((c>=51&&c<=67)||(c>=80&&c<=82)||c>=95)return 'rain';return (c===2||c===3||c===45||c===48||LIVEW.cloud>=65)?'cloudy':'clear'}}
+{const _t=tempAt;tempAt=function(reg){return liveOn(reg)?Math.round(LIVEW.temp):_t(reg)}}
+{const _l=weatherLabel;weatherLabel=function(reg){const w=weatherAt(reg);if(w==='snow')return 'Neige';const c=liveOn(reg)?LIVEW.code:0;if(c===45||c===48)return 'Brouillard';if(c>=95)return 'Orage';return _l(reg)}}
+const SNOWC=()=>!!(LIVEW&&LIVEW.reg===REGION&&(LIVEW.snow>0.02||weatherAt(REGION)==='snow'));
+// saisons (hémisphère et latitude réels)
+function season(){const al=Math.abs(REGION.lat);if(al<23.5)return 'trop';const m=new Date(simTime).getUTCMonth(),mm=REGION.lat>=0?m:(m+6)%12;return mm===9||mm===10?'aut':(mm===11||mm<=2)?'win':mm<=4?'spr':'sum'}
 function updateSky(dt){
   const s=sunDir(simTime),w=weatherAt(REGION);
-  rainF+=((w==='rain'?1:0)-rainF)*Math.min(1,dt*0.6); cloudF+=((w==='cloudy'?0.75:w==='rain'?1:0.25)-cloudF)*Math.min(1,dt*0.4);
+  rainF+=((w==='rain'?1:0)-rainF)*Math.min(1,dt*0.6); snowF+=((w==='snow'?1:0)-snowF)*Math.min(1,dt*0.6); cloudF+=((w==='cloudy'?0.75:w==='rain'||w==='snow'?1:0.25)-cloudF)*Math.min(1,dt*0.4);
   dayF=THREE.MathUtils.smoothstep(s.y,-0.1,0.2); nightF=1-THREE.MathUtils.smoothstep(s.y,-0.2,0.0);
   const dawn=Math.max(0,1-Math.abs(s.y-0.02)/0.16);
   cT.copy(C.nightTop).lerp(C.dayTop,dayF).lerp(C.dawnTop,dawn*0.5).lerp(C.rainTop,rainF*0.7*dayF);
   cH.copy(C.nightHor).lerp(C.dayHor,dayF).lerp(C.dawnHor,dawn*0.7).lerp(C.rainHor,rainF*0.7*dayF);
   const u=skyMat.uniforms; u.sunDir.value.copy(s); u.cTop.value.copy(cT); u.cHor.value.copy(cH); u.night.value=nightF; u.cloud.value=cloudF; u.rain.value=rainF; u.time.value+=dt;
-  FOG.color.copy(cH); FOG.density=GFXD*(REGION.gen==='row'?0.0042:0.0055)*(REGION.noQuarter?0.3:OSMD&&TER.ok?0.38:1)+rainF*0.012+nightF*0.004;
+  FOG.color.copy(cH); FOG.density=GFXD*(REGION.gen==='row'?0.0042:0.0055)*(REGION.noQuarter?0.3:OSMD&&TER.ok?0.38:1)+rainF*0.012+snowF*0.014+nightF*0.004;
   const p=dolly.position, inF=inside?0.12:(inBldNow&&!HIGH?0.55:1);
   sun.position.set(p.x+s.x*130,Math.max(s.y,0.04)*130,p.z+s.z*130); sun.target.position.copy(p);
   const warm=1-THREE.MathUtils.smoothstep(s.y,0.05,0.4); sun.color.setRGB(1,1-0.28*warm,1-0.5*warm);
-  sun.intensity=2.6*dayF*(1-0.65*rainF-0.25*(cloudF-0.25))*inF;
+  sun.intensity=2.6*dayF*(1-0.65*rainF-0.5*snowF-0.25*(cloudF-0.25))*inF;
   moon.position.set(p.x-s.x*100,Math.max(-s.y,0.25)*100,p.z-s.z*100); moon.target.position.copy(p); moon.intensity=0.28*nightF*inF;
   hemi.intensity=(0.1+0.35*dayF)*(inside?0.55:1); hemi.color.copy(cH).lerp(cT,0.25); hemi.groundColor.setRGB(0.32,0.17,0.1).multiplyScalar(0.4+0.6*dayF);
   renderer.toneMappingExposure=inside?1.05:0.95+nightF*0.35;
@@ -3049,7 +3061,7 @@ function updateSky(dt){
   maquisLight.intensity=nightF*2.2;
   const wu=WATER.uniforms; wu.sunDir.value.copy(s); wu.cTop.value.copy(cT); wu.cHor.value.copy(cH); wu.night.value=nightF; wu.fogColor.value.copy(FOG.color); wu.fogDensity.value=FOG.density;
   sky.position.copy(camera.getWorldPosition(tmpV));
-  if(!inside){rain.visible=rainF>0.05&&!inBldNow; rain.material.opacity=0.5*rainF}
+  if(!inside){rain.visible=(rainF>0.05||snowF>0.05)&&!inBldNow; const sn=snowF>rainF; rain.material.color.setHex(sn?0xffffff:0xb8cce0); rain.material.opacity=sn?0.9*snowF:0.5*rainF}
   for(const k of ['wall','concrete','block','brick','pave','roof','wood','bark','shutter','metal','paint','plastic','foliage','leaf','flower','frond','grass','cloth','atlas','atlasInst','gravel','lawn']) MAT[k].envMapIntensity=0.15+0.25*dayF;
   MAT.glass.envMapIntensity=1.2; MAT.puddle.envMapIntensity=1.4;
   return {w,s};
@@ -3477,6 +3489,11 @@ function computeAction(){
       for(const sh of S.shops) if(sh.shop&&Math.abs(sh.counter.ly-P.y)<1.2) consider(Math.hypot(P.x-sh.counter.x,P.z-sh.counter.z),2.3,{pri:3,label:'Acheter · '+sh.shop.name,fn:()=>openShop(sh.shop.door)});
       if(d.homeDoor&&isMyHome(d.homeDoor)) for(const b of S.beds) if(Math.abs(b.ly-P.y)<1.2) consider(Math.hypot(P.x-b.x,P.z-b.z),2.4,{pri:3,label:'Dormir',fn:sleepNow});
       if(!seat) for(const u of S.use) if(Math.abs(u.ly-P.y)<1.2) consider(Math.hypot(P.x-u.x,P.z-u.z),u.r,{pri:2.5,label:typeof u.label==='function'?u.label():u.label,fn:u.fn})}
+    if(REGION.noQuarter||Math.max(Math.abs(P.x),Math.abs(P.z))>qHalf()+80){const [la,lo]=playerLatLon(),c=lcAt(la,lo),now=Date.now(),cd=GAME.cool||(GAME.cool={}),h=hourNow();
+      if((c===1||c===3||c===10)&&!(cd.pick>now))consider(0,1,{pri:0.4,label:c===3?'Glaner dans les champs':c===10?'Cueillir des baies':'Cueillir des fruits sauvages',fn:()=>{busy=true;fadeTo(()=>{busy=false;cd.pick=Date.now()+120000;needs({faim:14,moral:3});addXP(4);toast(c===3?'Vous glanez de quoi manger · faim +14':'Vous cueillez des fruits · faim +14','good')})}});
+      if((h>=21||h<6)&&GAME.needs.energie<75&&!(cd.camp>now))consider(0,1,{pri:0.45,label:'Dormir à la belle étoile',fn:()=>{busy=true;fadeTo(()=>{busy=false;cd.camp=Date.now()+600000;needs({energie:65,moral:-2});GAME.hp=Math.min(100,(GAME.hp||100)+30);toast('Nuit à la belle étoile · énergie +65','good');saveGame()})}});
+      if(!(cd.fish>now)&&TER.ok){let w=false;for(let a=0;a<6.3&&!w;a+=1.05){const x=P.x+Math.cos(a)*14,z=P.z+Math.sin(a)*14,[l2,o2]=localToGeo(x,z),hh=terRaw(l2,o2);if(hh!=null&&(seaAt(l2,o2,hh)||lcAt(l2,o2)===9))w=true}
+        if(w)consider(0,1,{pri:0.42,label:'Pêcher',fn:()=>{busy=true;toast('Vous lancez votre ligne…');setTimeout(()=>{busy=false;cd.fish=Date.now()+90000;if(Math.random()<0.7){const b=toB(REGION.meal)*0.6|0;addMoney(b,'Vente de poisson');needs({moral:5});addXP(6);toast('Belle prise ! Vendue '+fmtB(b)+'.','good')}else toast('Rien n’a mordu cette fois.')},3500)}})}}
     for(const u of LMUSE) if(Math.abs(u.ly-P.y)<1.5) consider(Math.hypot(P.x-u.x,P.z-u.z),u.r,{pri:2.6,label:u.label,fn:u.fn});
     {const v=vehNear(P);if(v)consider(Math.hypot(P.x-v.s[0],P.z-v.s[1])-(v.t==='car'?1:0),2.3,{pri:1.5,label:(v.t==='moto'?'Louer cette moto':'Louer cette voiture')+' · '+fmtB(VFEE[v.t]),fn:()=>enterVehicle(v)})}
     const h=hourNow(); if(h>=9&&h<23.5) for(const s2 of places.maquisSeats){const q=s2.inner[1];consider(Math.hypot(P.x-q.x,P.z-q.z),1.5,{pri:3,label:'Manger · '+fmtB(toB(REGION.meal)),fn:eatOut})}
@@ -3609,7 +3626,7 @@ function rentHome(d){const c=toB(RENT[REGION.id]);if(!pay(c,'Loyer · une semain
   navTarget={x:d.x,z:d.z,label:'Votre logement'};toast('Logement loué pour une semaine. Suivez le repère pour rentrer chez vous.','good');ev('rent');checkAch();saveGame();renderPhone('home');updateTracker()}
 
 /* ---- téléphone ---- */
-const APPS=[['quests','Objectifs','#e0803a','<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>'],['jobs','Boulots','#2f8f5b','<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'],['bag','Sac','#8e5a2c','<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/>'],
+const APPS=[['passport','Passeport','#3a5a8c','<rect x="5" y="2.5" width="14" height="19" rx="2"/><circle cx="12" cy="10" r="3.5"/><path d="M8.5 10h7M12 6.5c-1.2 1-1.2 6 0 7M12 6.5c1.2 1 1.2 6 0 7M9 17h6"/>'],['quests','Objectifs','#e0803a','<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>'],['jobs','Boulots','#2f8f5b','<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'],['bag','Sac','#8e5a2c','<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/>'],
   ['bank','Banque','#1f6f9a','<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>'],['friends','Amis','#b8396f','<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3.2-5.5 6.5-5.5s6 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .7 3.3 2.6 3.5 5.5"/>'],['home','Logement','#5b45ad','<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>'],
   ['ach','Succès','#c49a1a','<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>'],['places','Lieux','#c4161c','<path d="M12 2l2.6 6.6L21 9l-5 4.6L17.4 21 12 17.3 6.6 21 8 13.6 3 9l6.4-.4z"/>'],['map','Carte','#2f6f5b','<path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>'],['settings','Réglages','#55585e','<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>']];
 let phoneView='home-screen';
@@ -3656,10 +3673,16 @@ function renderPhone(v){
     <div class="set"><span>Sauvegarde</span><div style="color:var(--muted);font-size:12.5px">${dbRef?'Synchronisée avec votre compte : reprenez sur téléphone, ordinateur ou casque.':'Enregistrée sur cet appareil.'}</div><div class="seg"><button type="button" data-save="1">Sauvegarder maintenant</button><button type="button" data-reset="1">Recommencer</button></div></div>`}
   else if(v==='places'){const P=dolly.position;
     h=back('Grands lieux')+`<p style="margin:0;color:var(--muted);font-size:13.5px">Les monuments de ${REGION.city}, à pied, à moto ou en voiture.</p><ul class="lst">${LANDMARKS.map((l,i)=>`<li class="it"><div class="tx"><b>${l.name}</b><span>${l.desc} · ${Math.round(Math.hypot(l.nav.x-P.x,l.nav.z-P.z))} m</span></div><button class="btn" type="button" data-lm="${i}">Y aller</button></li>`).join('')}</ul>`}
+  else if(v==='passport'){const P=PASS(),cs=Object.entries(P.c).sort((a,b)=>b[1].t-a[1].t),ls=Object.values(P.lm).sort((a,b)=>b.t-a.t),nLM=Object.keys(LM2).length;
+    h=back('Passeport')+`<div class="wallet"><small>${GAME.name||'Voyageur'} · Niveau ${level()}</small><strong>${cs.length} pays · ${ls.length} monument${ls.length>1?'s':''}</strong><small style="margin-top:4px">Explorez la Terre : chaque nouveau pays rapporte un tampon (+60 XP), chaque monument découvert +100 XP.</small></div>
+    <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Tampons</div>${cs.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${cs.map(([iso,o])=>`<span style="border:2px solid #7fa6dd;color:#7fa6dd;border-radius:10px;padding:6px 10px;font-weight:800;font-size:13px;transform:rotate(${(iso.charCodeAt(0)%7)-3}deg)">${wCountry(iso)}<br><small style="font-weight:600">${new Date(o.t).toLocaleDateString('fr-FR')}</small></span>`).join('')}</div>`:'<p style="margin:0;color:var(--muted)">Aucun tampon pour l’instant.</p>'}
+    <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Monuments découverts</div>${ls.length?`<ul class="lst">${ls.map(o=>`<li class="it"><div class="tx"><b>${o.n}</b><span>${o.c} · ${new Date(o.t).toLocaleDateString('fr-FR')}</span></div></li>`).join('')}</ul>`:'<p style="margin:0;color:var(--muted)">Approchez-vous d’un monument pour le découvrir.</p>'}
+    <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Monuments du monde à découvrir · ${nLM}</div><ul class="lst">${Object.entries(LM2).filter(([k,M])=>M.ll).map(([k,M])=>`<li class="it"><div class="tx"><b>${M.name}</b><span>${M.c}${M.iso?' · '+wCountry(M.iso):''}</span></div><button class="btn ghost" type="button" data-fly="${k}">Y aller</button></li>`).join('')}</ul>`}
   else if(v==='reset-confirm'){h=back('Recommencer')+`<p>Votre personnage, votre argent, vos logements et vos amis seront effacés. Cette action est définitive.</p><button class="btn" type="button" data-reset2="1" style="background:var(--warn)">Effacer et recommencer</button>`}
   B.innerHTML=h;
   B.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const t=b.dataset.v;if(t==='map'){closePhone();openMap('q')}else renderPhone(t)});
   B.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>acceptOffer(offers[+b.dataset.acc]));
+  B.querySelectorAll('[data-fly]').forEach(b=>b.onclick=()=>{const M=LM2[b.dataset.fly];closePhone();glbOpen();if(M&&M.ll){GLB.lat=M.ll[0];GLB.lon=M.ll[1]-0.012;GLB.z=900;GLB.pick=[M.ll[0]-0.006,M.ll[1]];glbInfo();glbDraw()}});
   B.querySelectorAll('[data-refresh]').forEach(b=>b.onclick=()=>{offers=genOffers();renderPhone('jobs')});
   B.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{mission=null;updateTracker();renderPhone('jobs')});
   B.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{useItem(b.dataset.use);renderPhone('bag')});
@@ -5168,8 +5191,8 @@ function loop(){
   }
   const bi={c:0}; for(const n of npcs) tickNPC(n,dt,dtH,moveMul,bi);
   blobMesh.count=bi.c; blobMesh.instanceMatrix.needsUpdate=true;
-  if(rain.visible&&!inside){const a=rainGeo.attributes.position.array,px=dolly.position.x,pz=dolly.position.z;
-    for(let i=0;i<RN;i++){const o=i*6;a[o+1]-=22*dt;a[o+4]-=22*dt;if(a[o+4]<0){const x=px+mrr(-30,30),z=pz+mrr(-30,30),y=25;a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=x+0.05;a[o+4]=y-0.45;a[o+5]=z}}
+  if(rain.visible&&!inside){const a=rainGeo.attributes.position.array,px=dolly.position.x,pz=dolly.position.z,py=dolly.position.y,sn=snowF>rainF,v=sn?2.2:22,L=sn?0.09:0.45,tt=performance.now()*0.001;
+    for(let i=0;i<RN;i++){const o=i*6;a[o+1]-=v*dt;a[o+4]-=v*dt;if(sn){const dx=Math.sin(tt*1.3+i)*dt*0.7;a[o]+=dx;a[o+3]+=dx}if(a[o+4]<py-1||a[o+1]>py+40){const x=px+mrr(-30,30),z=pz+mrr(-30,30),y=py+mrr(sn?2:20,26);a[o]=x;a[o+1]=y;a[o+2]=z;a[o+3]=x+(sn?0.06:0.05);a[o+4]=y-L;a[o+5]=z}}
     rainGeo.attributes.position.needsUpdate=true}
   const g=places&&places.grill, active=g&&!inside&&hourNow()>=10&&hourNow()<23;
   for(const s of smokeP){s.visible=!!active;if(active){s.userData.t+=dt*0.25;if(s.userData.t>1)s.userData.t-=1;const t=s.userData.t;s.position.set(g.x+Math.sin(t*5+s.id)*0.3*t,g.y+t*3.2,g.z+t*0.6);s.scale.setScalar(0.4+t*1.6)}}
@@ -5194,7 +5217,7 @@ function loop(){
   if(hudT<=0){
     hudT=0.5; refreshOffset(); $('#clock').textContent=fmtTime(simTime); tilesTick(); geoTick(); terMesh(); vegTick();
     const wl=weatherLabel(REGION); $('#weather').textContent=wl+' · '+tempAt(REGION)+' °C';
-    $('#wx-ico').innerHTML=WX_ICO[wl==='Pluie'?'rain':wl==='Nuageux'?'cloudy':wl==='Nuit claire'?'night':'clear'];
+    $('#wx-ico').innerHTML=WX_ICO[wl==='Pluie'||wl==='Orage'||wl==='Neige'?'rain':wl==='Nuageux'||wl==='Brouillard'?'cloudy':wl==='Nuit claire'?'night':'clear'];
     $('#speedtxt').textContent=timeScale===1?'Heure réelle':'×'+timeScale;
     $('#street').textContent=placeLabel(dolly.position.x,dolly.position.z);
     if(mapOpen){if(mapTab==='q')drawBigMap();else drawCountry();mapSide()}
@@ -5601,24 +5624,30 @@ async function terEnsure(lat,lon,rKm,ms=7000){const dLat=rKm/110.54,dLon=rKm/(11
   for(let x=Math.floor(terTX(lon-dLon));x<=Math.floor(terTX(lon+dLon));x++)for(let y=Math.floor(terTY(lat+dLat));y<=Math.floor(terTY(lat-dLat));y++)jobs.push(terLoad(x,y).catch(()=>null));
   await Promise.race([Promise.all(jobs),new Promise(r=>setTimeout(r,ms))])}
 async function terPrepare(R){if((window.MV_CONFIG||{}).terrain===false){TER.ok=false;return}
-  lcEnsure(R.lat,R.lon,6);try{await terEnsure(R.lat,R.lon,5);const h=terRaw(R.lat,R.lon);TER.ok=h!=null;TER.h0=h==null?0:Math.max(0,h)}catch(e){TER.ok=false}}
+  try{await Promise.all([lcEnsure(R.lat,R.lon,6),terEnsure(R.lat,R.lon,5)]);realCoast(R);const h=terRaw(R.lat,R.lon);TER.ok=h!=null;TER.h0=h==null?0:Math.max(0,h)}catch(e){TER.ok=false}}
+function realCoast(R){if(!TER.ok||!R.env||R.env.water!=='ocean'||!(R.world||R.noQuarter))return;
+  const kx=geoKX(R.lat),hit=(ang,d)=>{const x=Math.cos(ang)*d,z=Math.sin(ang)*d,la=R.lat-z/GEO_KZ,lo=R.lon+x/kx,h=terRaw(la,lo);return h!=null&&seaAt(la,lo,h)};
+  const sides={'+x':0,'+z':Math.PI/2,'-x':Math.PI,'-z':-Math.PI/2};let best=null,bd=1e9;
+  for(const k in sides)for(let d=250;d<=1600;d+=90){let n=0;for(let a=-0.5;a<=0.5;a+=0.25)if(hit(sides[k]+a,d))n++;if(n>=3){if(d<bd){bd=d;best=k}break}}
+  const E=R.env=Object.assign({},R.env);if(!best){E.water='none'}else E.side=best}
 const terSmooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
 // hauteur locale (m) au point (x,z) du monde, 0 dans le quartier, relief réel autour
 function terY(x,z){if(!TER.ok||inside)return 0;const [lat,lon]=localToGeo(x,z),h=terRaw(lat,lon);if(h==null)return 0;
   // plat sur le sol du quartier (520 m), puis le relief réel revient sur 350 m
   const q=REGION.noQuarter?40:TOTAL/2+352;let f=terSmooth(q,q+350,Math.max(Math.abs(x),Math.abs(z)));if(f<=0)return 0;
   if(TER.lmR!==REGION){TER.lmR=REGION;try{TER.lmf=lmSpots().filter(s=>s.k==='m2'&&s.x!=null&&s.flat!==false)}catch(e){TER.lmf=[]}}for(const s of TER.lmf){f=Math.min(f,terSmooth(s.rad+20,s.rad+260,Math.hypot(x-s.x,z-s.z)));if(f<=0)return 0}
-  const rel=h<=0?-TER.h0-2.5:h-TER.h0;return rel*f}
+  const rel=seaAt(lat,lon,h)?-TER.h0-2.5:Math.max(h,0.3)-TER.h0;return rel*f}
 // maillage du sol réel (8 km autour du joueur) coloré selon le climat, l'altitude et la pente
 function terMesh(){if(!TER.ok||!world)return;const P=dolly.position;
   if(TER.mesh&&TER.mesh.parent===world&&TER.at&&Math.hypot(TER.at[0]-P.x,TER.at[1]-P.z)<1500&&TER.at[2]===TER.ver)return;
-  const N0=160,S=8000,cx=Math.round(P.x/50)*50,cz=Math.round(P.z/50)*50,g=new THREE.PlaneGeometry(S,S,N0,N0);g.rotateX(-Math.PI/2);
+  const N0=HIGH?170:110,S=8000,cx=Math.round(P.x/50)*50,cz=Math.round(P.z/50)*50,g=new THREE.PlaneGeometry(S,S,N0,N0);g.rotateX(-Math.PI/2);
   const pos=g.attributes.position,col=new Float32Array(pos.count*3),c=new THREE.Color(),iso=REGION.iso||({cotonou:'BJ',paris:'FR',newyork:'US',tokyo:'JP'})[REGION.id]||'';
   const desert=W_DESERT.has(iso),alat=Math.abs(REGION.lat),base=desert?'#cdb07a':alat<15?'#5f7f36':alat<35?'#7d8f4a':alat<55?'#6f8f4f':'#7f8f72';
-  const raw=new Float32Array(pos.count),lcs=new Uint8Array(pos.count),cl=climate();
-  for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)+cz,[la,lo]=localToGeo(x,z),h=terRaw(la,lo);raw[i]=h==null?TER.h0:h;lcs[i]=lcAt(la,lo);pos.setY(i,terY(x,z)-0.05);pos.setX(i,x);pos.setZ(i,z)}
+  const raw=new Float32Array(pos.count),lcs=new Uint8Array(pos.count),lch=new Uint8Array(pos.count),cl=climate();let nSea=0;
+  for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)+cz,[la,lo]=localToGeo(x,z),h=terRaw(la,lo);raw[i]=h==null?TER.h0:h;lcs[i]=lcAt(la,lo);lch[i]=lcHas(la,lo)?1:0;pos.setY(i,terY(x,z)-0.05);pos.setX(i,x);pos.setZ(i,z)}
   for(let i=0;i<pos.count;i++){const h=raw[i],ix=i%(N0+1),nb=ix<N0?raw[i+1]:raw[i-1],slope=Math.abs(nb-h)/50;
-    if(h<=0)c.set('#c9b98f');else if(!lcColor(lcs[i],cl,pos.getX(i),pos.getZ(i),c))c.set(base);
+    const sea=lcs[i]===9&&h<=4||(!lch[i]&&h<=0);if(sea){c.set('#c9b98f');nSea++}else if(!lcColor(lcs[i],cl,pos.getX(i),pos.getZ(i),c))c.set(base);
+    if(!sea){const se=season();if(lcs[i]===2||lcs[i]===3||!lcs[i]){if(se==='aut')c.lerp(new THREE.Color('#a59a52'),0.35);else if(se==='win'&&cl.alat>38)c.lerp(new THREE.Color('#8f8a6a'),0.45)}if(SNOWC()&&lcs[i]!==9&&lcs[i]!==8)c.lerp(new THREE.Color('#f4f6f8'),0.85)}
     if(h>1800&&!desert)c.lerp(new THREE.Color('#7d7468'),Math.min(1,(h-1800)/900));
     if(slope>0.45)c.lerp(new THREE.Color(desert?'#a07c52':'#6e665c'),Math.min(1,(slope-0.45)*2));
     if(h>3600||(alat>60&&h>900))c.lerp(new THREE.Color('#f2f4f6'),Math.min(1,(h-(alat>60?900:3600))/400));
@@ -5627,6 +5656,11 @@ function terMesh(){if(!TER.ok||!world)return;const P=dolly.position;
   if(!TER.mat)TER.mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0});
   if(TER.mesh){TER.mesh.parent&&TER.mesh.parent.remove(TER.mesh);TER.mesh.geometry.dispose()}
   TER.mesh=new THREE.Mesh(g,TER.mat);TER.mesh.receiveShadow=true;TER.mesh.userData.ownGeo=true;world.add(TER.mesh);TER.at=[P.x,P.z,TER.ver];
+  // mer réelle : un plan d'eau au niveau de la mer partout où le littoral réel passe (océans, baies, lagunes)
+  if(nSea){if(!TER.seaMat){const U=WATER.uniforms;TER.seaMat=new THREE.ShaderMaterial({uniforms:{time:U.time,sunDir:U.sunDir,cTop:U.cTop,cHor:U.cHor,night:U.night,fogColor:U.fogColor,fogDensity:U.fogDensity,deep:{value:L('#0d4658')},shallow:{value:L('#2f8f98')},chop:{value:1}},vertexShader:WATER.vertexShader,fragmentShader:WATER.fragmentShader})}
+    if(!TER.sea){const sg=new THREE.PlaneGeometry(1,1);sg.rotateX(-Math.PI/2);TER.sea=new THREE.Mesh(sg,TER.seaMat);TER.sea.frustumCulled=false}
+    TER.sea.scale.set(S,1,S);TER.sea.position.set(cx,ENV&&ENV.kind!=='none'?Math.min(-TER.h0-0.6,-2.6):-TER.h0-0.6,cz);TER.sea.userData.own=false;if(TER.sea.parent!==world)world.add(TER.sea)}
+  else if(TER.sea&&TER.sea.parent)TER.sea.parent.remove(TER.sea);
   for(const m of (world.userData.far||[]))m.visible=false}
 /* ---- Occupation du sol réelle (OpenStreetMap, tuiles OpenFreeMap zoom 10, ~40 km) : forêts, champs, sable, roche, glace…
    Sert à colorer le relief et à planter la végétation du bon climat (sapins, feuillus, palmiers, acacias, cactus, rochers). ---- */
@@ -5638,6 +5672,8 @@ function lcLoad(x,y){const k=x+'/'+y;if(LC.tiles.has(k))return LC.tiles.get(k);
     for(const P of polys){g.fillStyle='rgb('+P.c*20+',0,0)';g.beginPath();for(const r of P.rings){r.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.closePath()}g.fill('evenodd')}
     const d=g.getImageData(0,0,256,256).data,a=new Uint8Array(65536);for(let i=0;i<65536;i++)a[i]=Math.round(d[i*4]/20);p.a=a;LC.ver++;TER.ver++;return a})();
   p.catch(()=>{});LC.tiles.set(k,p);return p}
+function lcHas(lat,lon){const X=lcTX(lon),Y=lcTY(lat),t=LC.tiles.get(Math.floor(X)+'/'+Math.floor(Y));return !!(t&&t.a)}
+function seaAt(lat,lon,h){return lcHas(lat,lon)?(lcAt(lat,lon)===9&&h<=4):h<=0}
 function lcAt(lat,lon){const X=lcTX(lon)*256,Y=lcTY(lat)*256,tx=Math.floor(X/256),ty=Math.floor(Y/256),t=LC.tiles.get(tx+'/'+ty);if(!t||!t.a)return 0;
   return t.a[Math.min(255,Math.floor(Y-ty*256))*256+Math.min(255,Math.floor(X-tx*256))]}
 function lcEnsure(lat,lon,rKm){if((window.MV_CONFIG||{}).landcover===false)return Promise.resolve();const dLat=rKm/110.54,dLon=rKm/(111.32*Math.cos(lat*Math.PI/180)),jobs=[];
@@ -5666,9 +5702,13 @@ function vegGeos(){if(VEG.geos)return VEG.geos;const C=new THREE.Color();
     cactus:merge([part(cyl,'#4f7a42',0,1.6,0,0.6,3.2,0.6),part(cyl,'#4f7a42',0.55,1.6,0,0.4,1.4,0.4,0,-1.2),part(cyl,'#4f7a42',0.9,2.3,0,0.4,1.4,0.4),part(cyl,'#4f7a42',-0.5,2,0,0.4,1.2,0.4,0,1.2),part(cyl,'#4f7a42',-0.8,2.6,0,0.38,1.2,0.38)]),
     bush:merge([part(dod,'#5f7a3a',0,0.5,0,1.8,1.2,1.8),part(dod,'#6b8642',0.6,0.4,0.3,1.2,0.9,1.2)]),
     rock:merge([part(dod,'#8a8378',0,0.3,0,2.2,1.4,1.8)]),
+    leafA0:merge([part(cyl,'#5a4632',0,1.5,0,0.35,3,0.35),part(ico,'#d9822b',0,4.4,0,4.6,3.8,4.6),part(ico,'#c8622a',0.9,5.4,0.4,3,2.6,3)]),
+    leafA1:merge([part(cyl,'#5a4632',0,1.5,0,0.35,3,0.35),part(ico,'#e0b83a',0,4.4,0,4.6,3.8,4.6),part(ico,'#cfa232',0.9,5.4,0.4,3,2.6,3)]),
+    leafA2:merge([part(cyl,'#5a4632',0,1.5,0,0.35,3,0.35),part(ico,'#b8432f',0,4.4,0,4.6,3.8,4.6),part(ico,'#9e8a3a',0.9,5.4,0.4,3,2.6,3)]),
+    leafW:merge([part(cyl,'#5f5246',0,2,0,0.35,4,0.35),part(cyl,'#5f5246',0.7,4.2,0,0.16,2.4,0.16,0,-0.7),part(cyl,'#5f5246',-0.7,4.4,0.2,0.16,2.4,0.16,0,0.7),part(cyl,'#5f5246',0,4.6,0.7,0.14,2.2,0.14,0.7,0),part(cyl,'#5f5246',0.1,5,-0.6,0.12,2,0.12,-0.6,0)]),
     reed:merge([part(cone,'#7a8a4a',0,0.7,0,0.5,1.4,0.5),part(cone,'#8a9a52',0.4,0.6,0.2,0.4,1.2,0.4)])};
   return VEG.geos}
-function vegBuild(){const P=dolly.position,cl=climate(),geo=vegGeos(),R=650,CELL=12,q=qHalf()+12,lists={};for(const k in geo)lists[k]=[];
+function vegBuild(){const P=dolly.position,cl=climate(),geo=vegGeos(),R=HIGH?950:480,DM=HIGH?1:0.6,SE=season(),CELL=12,q=qHalf()+12,lists={};for(const k in geo)lists[k]=[];
   // routes OSM proches : pas d'arbre sur la chaussée
   const RD=new Set(),rk=(x,z)=>Math.floor(x/8)+','+Math.floor(z/8);
   for(const O of osmSets())for(const r of O.r){const pts=r[4];for(let i=1;i<pts.length;i++){const [x0,z0]=pts[i-1],[x1,z1]=pts[i];if(Math.abs(x0-P.x)>R+50&&Math.abs(x1-P.x)>R+50)continue;const L=Math.hypot(x1-x0,z1-z0),n=Math.ceil(L/4);for(let k=0;k<=n;k++){const t=k/n;RD.add(rk(x0+(x1-x0)*t,z0+(z1-z0)*t))}}}
@@ -5679,7 +5719,7 @@ function vegBuild(){const P=dolly.position,cl=climate(),geo=vegGeos(),R=650,CELL
     let c=lcAt(la,lo);if(c===9||c===6)continue;const alt=h==null?0:h;
     if(!c)c=cl.desert?4:REGION.noQuarter?2:8;
     const dens={1:1.6,2:cl.savanna?0.07:0.05,3:0.015,4:cl.desert?0.012:0.006,5:0.12,7:0.3,8:0.03,10:0.35}[c]||0;
-    for(let n=0;n<3;n++){const r=hsh(i+seedR,j,n);if(r>=dens-n)continue;const x=cx+(hsh(i,j,n+7)-0.5)*CELL*0.9,z=cz+(hsh(i,j,n+13)-0.5)*CELL*0.9;
+    const far=Math.hypot(cx-P.x,cz-P.z)>650,dd=dens*DM*(far?0.45:1);for(let n=0;n<3;n++){const r=hsh(i+seedR,j,n);if(r>=dd-n)continue;const x=cx+(hsh(i,j,n+7)-0.5)*CELL*0.9,z=cz+(hsh(i,j,n+13)-0.5)*CELL*0.9;
       if(RD.has(rk(x,z)))continue;let hit=false;for(const b of colsNear(x,z))if(x>b[0]-2&&x<b[2]+2&&z>b[1]-2&&z<b[3]+2){hit=true;break}if(hit)continue;
       const u=hsh(i,j,n+21);let sp;
       if(c===1)sp=(cl.boreal||alt>1700)?'conif':cl.tropic?(u<0.12?'palm':'leaf'):(cl.alat>40&&u<0.35?'conif':'leaf');
@@ -5688,11 +5728,12 @@ function vegBuild(){const P=dolly.position,cl=climate(),geo=vegGeos(),R=650,CELL
       else if(c===4)sp=cl.desert?(cl.americas&&u<0.6?'cactus':u<0.5?'rock':'bush'):(cl.alat<30?'palm':'bush');
       else if(c===5)sp=u<0.85?'rock':'bush';else if(c===7)sp=u<0.6?'reed':'bush';else if(c===10)sp=cl.desert?(cl.americas&&u<0.3?'cactus':'bush'):u<0.75?'bush':(cl.savanna?'acacia':'leaf');
       else sp=cl.tropic?(u<0.5?'palm':'leaf'):cl.desert?'palm':'leaf';
+      if(sp==='leaf'){if(SE==='aut')sp='leafA'+Math.floor(hsh(i,j,n+61)*3);else if(SE==='win'&&cl.alat>35)sp='leafW'}
       const s=0.7+hsh(i,j,n+31)*0.6;lists[sp].push([x,TER.ok?terY(x,z):0,z,s,hsh(i,j,n+41)*6.283,0.85+hsh(i,j,n+51)*0.3])}}
   if(VEG.group){VEG.group.parent&&VEG.group.parent.remove(VEG.group);VEG.group.children.forEach(m=>m.dispose())}
   if(!VEG.mat)VEG.mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.9,metalness:0});
   const G=new THREE.Group(),o=new THREE.Object3D(),C=new THREE.Color();let total=0;
-  for(const k in lists){const L=lists[k].slice(0,k==='leaf'||k==='conif'?6000:2500);if(!L.length)continue;const m=new THREE.InstancedMesh(geo[k],VEG.mat,L.length);
+  for(const k in lists){const L=lists[k].slice(0,(k==='leaf'||k==='conif'?6000:2500)*(HIGH?1.4:0.6)|0);if(!L.length)continue;const m=new THREE.InstancedMesh(geo[k],VEG.mat,L.length);m.name=k;
     L.forEach((t,i)=>{o.position.set(t[0],t[1],t[2]);o.rotation.set(0,t[4],0);o.scale.setScalar(t[3]);o.updateMatrix();m.setMatrixAt(i,o.matrix);C.setScalar(t[5]);m.setColorAt(i,C)});
     m.instanceMatrix.needsUpdate=true;m.castShadow=HIGH&&k!=='reed';m.receiveShadow=true;G.add(m);total+=L.length}
   G.userData.own=false;world.add(G);VEG.group=G;VEG.n=total;VEG.at=[P.x,P.z,REGION,TER.ver,TILEV]}
@@ -5700,7 +5741,7 @@ function vegTick(){if(!world||inside||!GAME||!GAME.created||(window.MV_CONFIG||{
   if(a&&VEG.group&&VEG.group.parent===world&&a[2]===REGION&&Math.hypot(a[0]-P.x,a[1]-P.z)<220&&a[3]===TER.ver&&a[4]===TILEV)return;
   if(a&&a[2]===REGION&&VEG.group&&VEG.group.parent===world&&Math.hypot(a[0]-P.x,a[1]-P.z)<220&&performance.now()-(VEG.t||0)<4000)return;
   VEG.t=performance.now();vegBuild()}
-async function osmEnsure(R){OSMD=null;await terPrepare(R);try{
+async function osmEnsure(R){OSMD=null;liveWeather(R);await terPrepare(R);try{
   if(!OSM_IDX)OSM_IDX=await fetch('models/osm/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
   const C=window.MV_CONFIG||{},k=osmKey(R),SRV=(C.osmServer||'').replace(/\/+$/,''),live=C.osmBrowser!==false;
   if(!OSM_IDX[k]&&!SRV&&!live)return;
@@ -5892,7 +5933,8 @@ function regionForCity(c){const b=Object.values(REGIONS).find(r=>!r.world&&r.cit
 async function geoTick(){if(!GAME||!GAME.created||inside||rebasing)return;const P=dolly.position;geoT++;
   if(!WORLD){worldLoad().catch(()=>{});return}
   const [lat,lon]=playerLatLon();
-  if(geoT%4===0){const iso=countryAt(lat,lon);if(iso&&curIso&&iso!==curIso){toast('Frontière franchie : bienvenue · '+wCountry(iso)+'.','good')}if(iso)curIso=iso}
+  if(geoT%4===0){const iso=countryAt(lat,lon);if(iso&&curIso&&iso!==curIso){toast('Frontière franchie : bienvenue · '+wCountry(iso)+'.','good')}if(iso){curIso=iso;passCountry(iso)}}
+  if(geoT%3===0)passLandmarks();
   if(Math.hypot(P.x,P.z)<REBASE_D)return;
   rebaseTo(lat,lon,false)}
 // recentre le monde sur (lat, lon) : ville proche (moins de 6 km de son centre) ou région de passage ; fly = vol libre depuis la carte du monde
@@ -5911,9 +5953,17 @@ function rebaseTo(lat,lon,fly){const nc=nearestCity(lat,lon);if(!nc)return false
       curIso=countryAt(lat,lon)||curIso}
       catch(e){console.warn('Recentrage impossible',e)}finally{$('#loading').hidden=true;rebasing=false}},60);return true}
   catch(e){console.warn('Recentrage impossible',e);rebasing=false;$('#loading').hidden=true;return false}}
+/* ---- Passeport : tampons des pays visités et monuments découverts, récompensés en expérience ---- */
+const PASS=()=>GAME.pass||(GAME.pass={c:{},lm:{}});
+function passCountry(iso){if(!GAME||!GAME.created||!iso)return;const P=PASS();if(P.c[iso])return;P.c[iso]={t:Date.now(),city:REGION.noQuarter?'':REGION.city};const n=Object.keys(P.c).length;
+  if(n>1){addXP(60);toast('Nouveau tampon dans votre passeport : <b>'+wCountry(iso)+'</b> · '+n+' pays · +60 XP','good')}saveGame()}
+function passLandmarks(){if(!GAME||!GAME.created||inside)return;const P=PASS(),Q=dolly.position;
+  for(const l of LANDMARKS){if(!l.name)continue;const k=wNorm(l.name).replace(/[^a-z0-9]+/g,'_');if(P.lm[k])continue;if(Math.hypot(l.x-Q.x,l.z-Q.z)>Math.min(l.r||40,160)+25)continue;
+    P.lm[k]={t:Date.now(),n:l.name,c:REGION.noQuarter?(REGION.country||''):REGION.city};addXP(100);needs({moral:8});toast('Monument découvert : <b>'+l.name+'</b> · +100 XP','good');saveGame();break}}
 /* ---- Vol libre : carte du monde zoomable, on touche n'importe quel point de la Terre pour y atterrir ---- */
 const GLB={lon:0,lat:15,z:1,pick:null,ptr:new Map(),moved:0};
-function glbOpen(){if(drive){toast('Garez d’abord votre véhicule pour prendre l’avion.');return}if(inside){toast('Sortez du bâtiment pour prendre l’avion.');return}
+const flightPrice=km=>km<2?0:Math.round((km<400?3000+km*12:9000+km*4.2)/100)*100;
+function glbOpen(){if(inside){toast('Sortez du bâtiment pour prendre l’avion.');return}
   $('#travel').hidden=true;$('#globe').hidden=false;const [la,lo]=playerLatLon();GLB.lat=la;GLB.lon=lo;GLB.z=4;GLB.pick=null;glbInfo();
   worldLoad().then(glbDraw).catch(()=>{$('#g-pick').textContent='Carte du monde indisponible (hors ligne ?)'});glbDraw()}
 function glbSize(){const c=$('#gmap'),r=c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(r.width*d)||c.height!==Math.round(r.height*d)){c.width=Math.round(r.width*d);c.height=Math.round(r.height*d)}return {c,W:c.width,H:c.height,d}}
@@ -5932,7 +5982,7 @@ function glbDraw(){if($('#globe').hidden)return;const {c,W,H,d}=glbSize(),g=c.ge
 function glbInfo(){const el=$('#g-pick'),go=$('#g-go');if(!GLB.pick){el.textContent='Touchez la carte pour choisir où atterrir.';go.disabled=true;return}
   const [la,lo]=GLB.pick,iso=countryAt(la,lo),nc=nearestCity(la,lo),[pl,po]=playerLatLon(),km=Math.round(Math.hypot((la-pl)*111.2,(lo-po)*111.2*Math.cos(la*Math.PI/180)));
   if(!iso){el.textContent='En pleine mer : choisissez un point sur la terre ferme.';go.disabled=true;return}
-  el.textContent=Math.abs(la).toFixed(3)+'° '+(la>=0?'N':'S')+', '+Math.abs(lo).toFixed(3)+'° '+(lo>=0?'E':'O')+' · '+wCountry(iso)+(nc?' · '+(nc.km<6?nc.c[0]:'à '+Math.round(nc.km)+' km de '+nc.c[0]):'')+' · vol de '+km.toLocaleString('fr')+' km';go.disabled=false}
+  el.textContent=Math.abs(la).toFixed(3)+'° '+(la>=0?'N':'S')+', '+Math.abs(lo).toFixed(3)+'° '+(lo>=0?'E':'O')+' · '+wCountry(iso)+(nc?' · '+(nc.km<6?nc.c[0]:'à '+Math.round(nc.km)+' km de '+nc.c[0]):'')+' · vol de '+km.toLocaleString('fr')+' km · billet '+fmtB(flightPrice(km));GLB.km=km;go.disabled=false}
 {const c=$('#gmap'),pt=e=>{const r=c.getBoundingClientRect(),d=c.width/r.width;return [(e.clientX-r.left)*d,(e.clientY-r.top)*d]};
   const zoomAt=(f,x,y)=>{const {W,H}=glbSize(),[la,lo]=glbLL(x,y,W,H);GLB.z=Math.max(0.9,Math.min(4000,GLB.z*f));const [la2,lo2]=glbLL(x,y,W,H);GLB.lat=Math.max(-80,Math.min(80,GLB.lat+(la-la2)));GLB.lon+=lo-lo2;glbDraw()};
   c.addEventListener('wheel',e=>{e.preventDefault();const [x,y]=pt(e);zoomAt(Math.exp(-e.deltaY*0.0015),x,y)},{passive:false});
@@ -5944,9 +5994,9 @@ function glbInfo(){const el=$('#g-pick'),go=$('#g-go');if(!GLB.pick){el.textCont
   c.addEventListener('pointercancel',e=>GLB.ptr.delete(e.pointerId));
   $('#g-in').onclick=()=>{const {W,H}=glbSize();zoomAt(2,W/2,H/2)};$('#g-out').onclick=()=>{const {W,H}=glbSize();zoomAt(0.5,W/2,H/2)};
   $('#g-close').onclick=()=>{$('#globe').hidden=true};
-  $('#g-go').onclick=()=>{if(!GLB.pick)return;$('#globe').hidden=true;const [la,lo]=GLB.pick;if(!WORLD){toast('Carte du monde indisponible.');return}rebaseTo(la,lo,true)};
+  $('#g-go').onclick=()=>{if(!GLB.pick)return;const [la,lo]=GLB.pick;if(!WORLD){toast('Carte du monde indisponible.');return}const pr=flightPrice(GLB.km||0);if(pr&&!pay(pr,'Vol libre · '+(wCountry(countryAt(la,lo)||'')||'')))return;$('#globe').hidden=true;if(drive){drive.lost=true;exitVehicle()}if(GAME.stats)GAME.stats.travels=(GAME.stats.travels||0)+1;rebaseTo(la,lo,true)};
   $('#t-free').onclick=glbOpen;addEventListener('resize',()=>glbDraw())}
-window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,veg:()=>({n:VEG.n,lc:[...LC.tiles.keys()],kinds:VEG.group?VEG.group.children.map(m=>m.count):[]}),lm:()=>Object.keys(LMVIS).map(k=>[k,LMVIS[k].inst?Object.keys(LMVIS[k].inst):null,LMVIS[k].models.map(d=>d.id+'@'+Math.round(d.x)+','+Math.round(d.z))]),noon:()=>{simTime+=((12-((simTime/3600000+tzOff)%24))+24)%24*3600000},geo:()=>{const ll=playerLatLon();return{ll,R:[REGION.lat,REGION.lon,REGION.id,!!REGION.noQuarter],nc:nearestCity(ll[0],ll[1]),rebasing,pos:[dolly.position.x,dolly.position.z],world:!!WORLD,iso:curIso,osm:OSMD?(OSMD.b||[]).length:null,key:osmKey(REGION)}},tp:(x,z,yw)=>{if(!inside)dolly.position.set(x,0,z);if(yw!=null){yaw=yw;pitch=0.05}}});
+window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,env:()=>({kind:ENV&&ENV.kind,sea:!!(TER.sea&&TER.sea.parent),wx:LIVEW,season:season(),w:weatherAt(REGION)}),pass:()=>GAME.pass,veg:()=>({n:VEG.n,lc:[...LC.tiles.keys()],kinds:VEG.group?VEG.group.children.map(m=>m.name+':'+m.count):[]}),lm:()=>Object.keys(LMVIS).map(k=>[k,LMVIS[k].inst?Object.keys(LMVIS[k].inst):null,LMVIS[k].models.map(d=>d.id+'@'+Math.round(d.x)+','+Math.round(d.z))]),noon:()=>{simTime+=((12-((simTime/3600000+tzOff)%24))+24)%24*3600000},geo:()=>{const ll=playerLatLon();return{ll,R:[REGION.lat,REGION.lon,REGION.id,!!REGION.noQuarter],nc:nearestCity(ll[0],ll[1]),rebasing,pos:[dolly.position.x,dolly.position.z],world:!!WORLD,iso:curIso,osm:OSMD?(OSMD.b||[]).length:null,key:osmKey(REGION)}},tp:(x,z,yw)=>{if(!inside)dolly.position.set(x,0,z);if(yw!=null){yaw=yw;pitch=0.05}}});
 
 async function boot(){
   try{

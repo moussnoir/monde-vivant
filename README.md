@@ -2,7 +2,7 @@
 
 Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotonou, Paris, New York, Tokyo et plus de 7 200 villes du monde. Three.js (r128), sans build : un seul `index.html` et des ressources statiques.
 
-- `index.html` : le jeu (v0.25 : vol libre sur toute la Terre, nature réelle, 36 monuments à leur vraie place, architecture de chaque pays)
+- `index.html` : le jeu (v0.26 : mer et littoral réels, météo en direct, saisons, passeport, vol libre sur toute la Terre, nature réelle, 36 monuments)
 - `config.js` : configuration de déploiement (URL du serveur de cartes)
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
@@ -37,6 +37,13 @@ La sauvegarde est stockée dans le navigateur (`localStorage`).
 - **Nature réelle** : l’occupation du sol d’OpenStreetMap (tuiles OpenFreeMap au zoom 10 : forêts, champs, prairies, sable, roche, glace, zones humides, villes, lacs) colore le relief et place la végétation adaptée au climat : feuillus, sapins, palmiers, acacias de savane, cactus des déserts américains, buissons, roseaux et rochers. `landcover:false` / `vegetation:false` dans `config.js` les désactivent.
 - **Campagne vivante** : passants et voitures sur les routes hors des villes, plus rapides sur les nationales et autoroutes ; on ne peut plus gravir les parois trop raides.
 - **Monuments à leur vraie place** (36) : les modèles 3D (Big Ben, Colisée, Grande Pyramide, Burj Khalifa…) et des monuments construits directement dans le jeu : Taj Mahal, Machu Picchu, Grande Muraille, Sagrada Família, tour de Pise, Pétra, Chichén Itzá, Stonehenge, Angkor Vat, Golden Gate, Sphinx et pyramides de Khéphren et Mykérinos, moaï de l’île de Pâques, tours Petronas, tour CN, Mont-Saint-Michel, mosquée de Djenné, porte du Non-Retour à Ouidah, basilique de Yamoussoukro, Grand Zimbabwe. Ils apparaissent quand on passe à moins de 6 km.
+- **Mer et littoral réels** : la mer apparaît là où passe la vraie côte (occupation du sol OpenStreetMap + altitude), y compris baies et lagunes ; la mer « dessinée » d’une ville côtière n’est conservée que si la vraie côte est à moins de 1,6 km, du bon côté (ex. Ouidah : plage à 4 km du centre).
+- **Météo en direct** (Open-Meteo, sans clé) : pluie, neige, orage, brouillard, température et neige au sol réels à l’endroit où l’on se trouve, quand le temps du jeu suit l’heure réelle. `liveWeather:false` dans `config.js` revient à la météo simulée.
+- **Saisons** selon l’hémisphère et la latitude : feuillages d’automne, arbres nus et herbe jaunie l’hiver, sol enneigé quand il y a de la neige.
+- **Passeport** (application du téléphone) : un tampon par pays visité (+60 XP), chaque monument découvert à pied (+100 XP), la liste des monuments du monde avec un bouton « Y aller ».
+- **Vivre en pleine nature** : cueillir des fruits, glaner dans les champs, pêcher au bord de l’eau (le poisson se vend), dormir à la belle étoile la nuit.
+- **Vol libre payant** au prix d’un billet selon la distance ; possible aussi en voiture (le véhicule de location est rendu).
+- **Téléphones** : moins d’arbres et un relief plus léger en qualité basse ; en qualité haute, la végétation s’étend jusqu’à ~950 m.
 - **Noms de rues** dans la langue du pays (russe, arabe, turc, persan, hindi, chinois, coréen, indonésien, vietnamien, thaï, swahili, grec, polonais, néerlandais, scandinave…).
 - **Architecture régionale** : façades, couleurs et toits selon la région du monde (maisons blanches à toits plats d’Afrique du Nord et du Moyen-Orient, tuiles méditerranéennes, barres soviétiques, couleurs vives d’Amérique latine, Inde, Chine, Asie du Sud-Est, toits à deux pentes en tôle, tuile ou ardoise…), pour les plans OpenStreetMap comme pour le quartier de départ.
 
