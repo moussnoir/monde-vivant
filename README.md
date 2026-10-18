@@ -2,7 +2,7 @@
 
 Jeu 3D de vie quotidienne dans des villes réelles, à l’heure locale : Cotonou, Paris, New York, Tokyo et plus de 7 200 villes du monde. Three.js (r128), sans build : un seul `index.html` et des ressources statiques.
 
-- `index.html` : le jeu (v0.26 : mer et littoral réels, météo en direct, saisons, passeport, vol libre sur toute la Terre, nature réelle, 36 monuments)
+- `index.html` : le jeu (v0.27 : multijoueur, lacs et fleuves, météo heure par heure ; mer et littoral réels, météo en direct, saisons, passeport, vol libre sur toute la Terre, nature réelle, 36 monuments)
 - `config.js` : configuration de déploiement (URL du serveur de cartes)
 - `art/` : image d’accueil et textures
 - `models/` : modèles 3D (personnages, créatures, meubles, véhicules, monuments) en JSON base64, `world.json` (villes et pays)
@@ -44,6 +44,9 @@ La sauvegarde est stockée dans le navigateur (`localStorage`).
 - **Vivre en pleine nature** : cueillir des fruits, glaner dans les champs, pêcher au bord de l’eau (le poisson se vend), dormir à la belle étoile la nuit.
 - **Vol libre payant** au prix d’un billet selon la distance ; possible aussi en voiture (le véhicule de location est rendu).
 - **Téléphones** : moins d’arbres et un relief plus léger en qualité basse ; en qualité haute, la végétation s’étend jusqu’à ~950 m.
+- **En ligne (multijoueur)** : les autres joueurs apparaissent dans le monde, à leur vraie position sur la Terre (pseudo, apparence, à pied ou en véhicule). On peut les saluer et écrire aux joueurs proches (application « En ligne » du téléphone). Le jeu utilise un serveur MQTT public et gratuit (sans compte), par cases d’environ 5 km ; `online:false` dans `config.js` le désactive, `mpBrokers:['wss://…']` permet d’utiliser votre propre serveur (Mosquitto, EMQX…). Les messages passent par un serveur public : ne pas y partager d’informations personnelles.
+- **Lacs et grands fleuves** : nappe d’eau à leur altitude réelle (Léman, Victoria, Nil…).
+- **Météo heure par heure** : en temps accéléré, le jeu suit les prévisions et l’historique réels (7 jours) au lieu d’une météo simulée.
 - **Noms de rues** dans la langue du pays (russe, arabe, turc, persan, hindi, chinois, coréen, indonésien, vietnamien, thaï, swahili, grec, polonais, néerlandais, scandinave…).
 - **Architecture régionale** : façades, couleurs et toits selon la région du monde (maisons blanches à toits plats d’Afrique du Nord et du Moyen-Orient, tuiles méditerranéennes, barres soviétiques, couleurs vives d’Amérique latine, Inde, Chine, Asie du Sud-Est, toits à deux pentes en tôle, tuile ou ardoise…), pour les plans OpenStreetMap comme pour le quartier de départ.
 

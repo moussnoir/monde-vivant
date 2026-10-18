@@ -417,7 +417,7 @@ body.creating .hud,body.creating #minimap,body.creating #hint,body.creating #joy
 
 <div id="intro">
   <div class="box">
-    <div class="eyebrow">Version 0.26 · Mer réelle, météo en direct, saisons et passeport</div>
+    <div class="eyebrow">Version 0.27 · Jouer avec les autres, lacs et météo heure par heure</div>
     <h1 id="in-title">Monde Vivant</h1>
     <p id="in-sub">Vivez votre vie dans des quartiers qui tournent à l'heure réelle de Cotonou, Paris, New York et Tokyo.</p>
     <div class="chips"><span>4 villes réelles à l’heure locale</span><span>Créatures à capturer</span><span>Vie quotidienne</span><span>VR · PC · mobile</span></div>
@@ -3027,14 +3027,17 @@ const cT=new THREE.Color(),cH=new THREE.Color(); let dayF=1,nightF=0;
 const tmpV=new THREE.Vector3(),blobO=new THREE.Object3D();
 let LIVEW=null,snowF=0;
 async function liveWeather(R,force){const k=R.lat.toFixed(2)+','+R.lon.toFixed(2);if(!force&&LIVEW&&LIVEW.k===k&&Date.now()-LIVEW.t<20*60000)return;if((window.MV_CONFIG||{}).liveWeather===false)return;
-  try{const u='https://api.open-meteo.com/v1/forecast?latitude='+R.lat.toFixed(3)+'&longitude='+R.lon.toFixed(3)+'&current=temperature_2m,weather_code,cloud_cover,snow_depth,wind_speed_10m&timezone=GMT';
-    const j=await fetch(u).then(r=>r.json()),c=j.current;if(!c)return;LIVEW={k,t:Date.now(),temp:c.temperature_2m,code:c.weather_code,cloud:c.cloud_cover,snow:c.snow_depth||0,wind:c.wind_speed_10m,reg:R};TER.ver++}catch(e){}}
-const liveOn=reg=>reg===REGION&&LIVEW&&LIVEW.reg===REGION&&timeScale===1&&weatherMode==='auto'&&Math.abs(simTime-Date.now())<36e5;
-{const _w=weatherAt;weatherAt=function(reg){if(!liveOn(reg))return _w(reg);const c=LIVEW.code;
-  if((c>=71&&c<=77)||c===85||c===86)return 'snow';if((c>=51&&c<=67)||(c>=80&&c<=82)||c>=95)return 'rain';return (c===2||c===3||c===45||c===48||LIVEW.cloud>=65)?'cloudy':'clear'}}
-{const _t=tempAt;tempAt=function(reg){return liveOn(reg)?Math.round(LIVEW.temp):_t(reg)}}
-{const _l=weatherLabel;weatherLabel=function(reg){const w=weatherAt(reg);if(w==='snow')return 'Neige';const c=liveOn(reg)?LIVEW.code:0;if(c===45||c===48)return 'Brouillard';if(c>=95)return 'Orage';return _l(reg)}}
-const SNOWC=()=>!!(LIVEW&&LIVEW.reg===REGION&&(LIVEW.snow>0.02||weatherAt(REGION)==='snow'));
+  try{const u='https://api.open-meteo.com/v1/forecast?latitude='+R.lat.toFixed(3)+'&longitude='+R.lon.toFixed(3)+'&current=temperature_2m,weather_code,cloud_cover,snow_depth,wind_speed_10m&hourly=temperature_2m,weather_code,cloud_cover,snow_depth&past_days=1&forecast_days=7&timezone=GMT';
+    const j=await fetch(u).then(r=>r.json()),c=j.current;if(!c)return;const H=j.hourly;LIVEW={k,t:Date.now(),temp:c.temperature_2m,code:c.weather_code,cloud:c.cloud_cover,snow:c.snow_depth||0,wind:c.wind_speed_10m,reg:R,h:H&&H.time?{t:H.time.map(x=>Date.parse(x+'Z')),temp:H.temperature_2m,code:H.weather_code,cloud:H.cloud_cover,snow:H.snow_depth}:null};TER.ver++}catch(e){}}
+// météo réelle à l'heure du jeu : conditions actuelles, ou prévisions/historique heure par heure quand le temps est accéléré
+function liveAt(){if(!LIVEW||LIVEW.reg!==REGION||weatherMode!=='auto')return null;if(Math.abs(simTime-Date.now())<36e5)return LIVEW;const H=LIVEW.h;if(!H||!H.t.length||simTime<H.t[0]||simTime>H.t[H.t.length-1]+36e5)return null;
+  let i=Math.min(H.t.length-1,Math.max(0,Math.floor((simTime-H.t[0])/36e5)));return {temp:H.temp[i],code:H.code[i],cloud:H.cloud[i],snow:H.snow[i]||0}}
+const liveOn=reg=>reg===REGION&&!!liveAt();
+{const _w=weatherAt;weatherAt=function(reg){if(!liveOn(reg))return _w(reg);const LW=liveAt(),c=LW.code;
+  if((c>=71&&c<=77)||c===85||c===86)return 'snow';if((c>=51&&c<=67)||(c>=80&&c<=82)||c>=95)return 'rain';return (c===2||c===3||c===45||c===48||LW.cloud>=65)?'cloudy':'clear'}}
+{const _t=tempAt;tempAt=function(reg){return liveOn(reg)?Math.round(liveAt().temp):_t(reg)}}
+{const _l=weatherLabel;weatherLabel=function(reg){const w=weatherAt(reg);if(w==='snow')return 'Neige';const c=liveOn(reg)?liveAt().code:0;if(c===45||c===48)return 'Brouillard';if(c>=95)return 'Orage';return _l(reg)}}
+const SNOWC=()=>{const L=liveAt();return !!(L&&(L.snow>0.02||weatherAt(REGION)==='snow'))};
 // saisons (hémisphère et latitude réels)
 function season(){const al=Math.abs(REGION.lat);if(al<23.5)return 'trop';const m=new Date(simTime).getUTCMonth(),mm=REGION.lat>=0?m:(m+6)%12;return mm===9||mm===10?'aut':(mm===11||mm<=2)?'win':mm<=4?'spr':'sum'}
 function updateSky(dt){
@@ -3483,6 +3486,7 @@ function computeAction(){
   }else{
     const T=missionTarget(); if(T) consider(Math.hypot(P.x-T.x,P.z-T.z),2.4,{pri:6,label:T.label,fn:missionStep});
     for(const n of npcs) if(n.g.visible&&!n.inside) consider(Math.hypot(P.x-n.pos.x,P.z-n.pos.z),2.3,{pri:2,label:'Parler à '+first(n),fn:()=>openCard(n)});
+    {const mn=mpNear();if(mn)consider(mn.d,3,{pri:2.2,label:'Saluer '+escH(mn.P.n)+' (joueur)',fn:()=>{mpTo(mn.P.i,{i:mpId(),n:GAME.name||'Joueur',w:1});toast('Vous saluez <b>'+escH(mn.P.n)+'</b>.');needs({moral:2})}})}
     {const cn=crowdNearest();if(cn)consider(cn.d,2.2,{pri:1,label:'Saluer ce passant',fn:()=>{const a=cn.a;a.v=0;setTimeout(()=>{a.v=mrr(1.1,1.6)},2500);toast('« '+mpick(REGION.greetNew||['Bonjour !'])+' »');if(Date.now()-CROWD.greet>30000){CROWD.greet=Date.now();needs({moral:2})}}})}
     for(const n of npcs) if(n.inside&&n.inside.walk&&Math.abs(n.inside.ly-P.y)<1.3) consider(Math.hypot(P.x-n.inside.x,P.z-n.inside.z),2.4,{pri:2,label:'Parler à '+first(n),fn:()=>openCard(n)});
     for(const d of openB){const S=d.open.spots;
@@ -3626,7 +3630,7 @@ function rentHome(d){const c=toB(RENT[REGION.id]);if(!pay(c,'Loyer · une semain
   navTarget={x:d.x,z:d.z,label:'Votre logement'};toast('Logement loué pour une semaine. Suivez le repère pour rentrer chez vous.','good');ev('rent');checkAch();saveGame();renderPhone('home');updateTracker()}
 
 /* ---- téléphone ---- */
-const APPS=[['passport','Passeport','#3a5a8c','<rect x="5" y="2.5" width="14" height="19" rx="2"/><circle cx="12" cy="10" r="3.5"/><path d="M8.5 10h7M12 6.5c-1.2 1-1.2 6 0 7M12 6.5c1.2 1 1.2 6 0 7M9 17h6"/>'],['quests','Objectifs','#e0803a','<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>'],['jobs','Boulots','#2f8f5b','<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'],['bag','Sac','#8e5a2c','<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/>'],
+const APPS=[['online','En ligne','#2a8ab8','<circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M2.5 19c.4-3 2.8-5 5.5-5s5.1 2 5.5 5M13.5 18.5c.3-2.3 1.6-3.8 3.5-3.8s3.2 1.5 3.5 3.8"/>'],['passport','Passeport','#3a5a8c','<rect x="5" y="2.5" width="14" height="19" rx="2"/><circle cx="12" cy="10" r="3.5"/><path d="M8.5 10h7M12 6.5c-1.2 1-1.2 6 0 7M12 6.5c1.2 1 1.2 6 0 7M9 17h6"/>'],['quests','Objectifs','#e0803a','<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>'],['jobs','Boulots','#2f8f5b','<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'],['bag','Sac','#8e5a2c','<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 0 1 6 0"/>'],
   ['bank','Banque','#1f6f9a','<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>'],['friends','Amis','#b8396f','<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3.2-5.5 6.5-5.5s6 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .7 3.3 2.6 3.5 5.5"/>'],['home','Logement','#5b45ad','<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>'],
   ['ach','Succès','#c49a1a','<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>'],['places','Lieux','#c4161c','<path d="M12 2l2.6 6.6L21 9l-5 4.6L17.4 21 12 17.3 6.6 21 8 13.6 3 9l6.4-.4z"/>'],['map','Carte','#2f6f5b','<path d="M3 6.5l6-2.5 6 2.5 6-2.5v13.5l-6 2.5-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/>'],['settings','Réglages','#55585e','<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>']];
 let phoneView='home-screen';
@@ -3673,6 +3677,13 @@ function renderPhone(v){
     <div class="set"><span>Sauvegarde</span><div style="color:var(--muted);font-size:12.5px">${dbRef?'Synchronisée avec votre compte : reprenez sur téléphone, ordinateur ou casque.':'Enregistrée sur cet appareil.'}</div><div class="seg"><button type="button" data-save="1">Sauvegarder maintenant</button><button type="button" data-reset="1">Recommencer</button></div></div>`}
   else if(v==='places'){const P=dolly.position;
     h=back('Grands lieux')+`<p style="margin:0;color:var(--muted);font-size:13.5px">Les monuments de ${REGION.city}, à pied, à moto ou en voiture.</p><ul class="lst">${LANDMARKS.map((l,i)=>`<li class="it"><div class="tx"><b>${l.name}</b><span>${l.desc} · ${Math.round(Math.hypot(l.nav.x-P.x,l.nav.z-P.z))} m</span></div><button class="btn" type="button" data-lm="${i}">Y aller</button></li>`).join('')}</ul>`}
+  else if(v==='online'){MP.unread=0;const on=mpOn(),Q=dolly.position,ps=Object.values(MP.peers).map(P=>{const [x,z]=geoToLocal(P.a,P.o);return {P,d:Math.hypot(x-Q.x,z-Q.z)}}).sort((a,b)=>a.d-b.d);
+    h=back('En ligne')+`<div class="wallet"><small>${on?(MP.ok?'Connecté':'Connexion au serveur…'):'Hors ligne'}</small><strong>${ps.length} joueur${ps.length>1?'s':''} près de vous</strong><small style="margin-top:4px">Dans un rayon d’environ 10 km. Votre pseudo (${escH(GAME.name||'Joueur')}), votre apparence et votre position dans le jeu sont visibles par les joueurs proches, sur un serveur public.</small></div>
+    <button class="btn ${on?'ghost':''}" type="button" data-mptoggle="1">${on?'Se déconnecter':'Se connecter'}</button>
+    ${ps.length?`<ul class="lst">${ps.map(o=>`<li class="it"><div class="tx"><b>${escH(o.P.n)}</b><span>${o.d<1000?Math.round(o.d)+' m':(o.d/1000).toFixed(1)+' km'}${o.P.c?' · '+escH(wCountry(o.P.c)):''}${o.P.d==='car'?' · en voiture':o.P.d==='moto'?' · à moto':o.P.d==='in'?' · dans un bâtiment':''}</span></div><button class="btn ghost" type="button" data-mpwave="${escH(o.P.i)}">Saluer</button></li>`).join('')}</ul>`:'<p style="margin:0;color:var(--muted)">Personne autour pour l’instant. Invitez des amis à jouer : le jeu est à la même adresse pour tout le monde.</p>'}
+    <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Messages autour de vous</div>
+    <ul class="lst">${MP.log.length?MP.log.slice(-15).map(m=>`<li class="it"><div class="tx"><b>${escH(m.n)}</b><span>${escH(m.t)}</span></div></li>`).join(''):'<li class="it"><div class="tx"><span>Aucun message.</span></div></li>'}</ul>
+    <div style="display:flex;gap:8px"><input id="mp-msg" maxlength="160" placeholder="Écrire aux joueurs proches…" style="flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:inherit;font:inherit"><button class="btn" type="button" data-mpsend="1">Envoyer</button></div>`}
   else if(v==='passport'){const P=PASS(),cs=Object.entries(P.c).sort((a,b)=>b[1].t-a[1].t),ls=Object.values(P.lm).sort((a,b)=>b.t-a.t),nLM=Object.keys(LM2).length;
     h=back('Passeport')+`<div class="wallet"><small>${GAME.name||'Voyageur'} · Niveau ${level()}</small><strong>${cs.length} pays · ${ls.length} monument${ls.length>1?'s':''}</strong><small style="margin-top:4px">Explorez la Terre : chaque nouveau pays rapporte un tampon (+60 XP), chaque monument découvert +100 XP.</small></div>
     <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">Tampons</div>${cs.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${cs.map(([iso,o])=>`<span style="border:2px solid #7fa6dd;color:#7fa6dd;border-radius:10px;padding:6px 10px;font-weight:800;font-size:13px;transform:rotate(${(iso.charCodeAt(0)%7)-3}deg)">${wCountry(iso)}<br><small style="font-weight:600">${new Date(o.t).toLocaleDateString('fr-FR')}</small></span>`).join('')}</div>`:'<p style="margin:0;color:var(--muted)">Aucun tampon pour l’instant.</p>'}
@@ -3682,6 +3693,9 @@ function renderPhone(v){
   B.innerHTML=h;
   B.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const t=b.dataset.v;if(t==='map'){closePhone();openMap('q')}else renderPhone(t)});
   B.querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>acceptOffer(offers[+b.dataset.acc]));
+  B.querySelectorAll('[data-mptoggle]').forEach(b=>b.onclick=()=>{GAME.settings.online=!mpOn();saveGame();renderPhone('online')});
+  B.querySelectorAll('[data-mpwave]').forEach(b=>b.onclick=()=>{const P=MP.peers[b.dataset.mpwave];if(P){mpTo(P.i,{i:mpId(),n:GAME.name||'Joueur',w:1});toast('Vous saluez <b>'+escH(P.n)+'</b>.')}});
+  B.querySelectorAll('[data-mpsend]').forEach(b=>{const inp=$('#mp-msg'),go=()=>{if(mpSay(inp.value)){inp.value='';renderPhone('online')}else if(!MP.ok)toast('Pas encore connecté au serveur.')};b.onclick=go;if(inp)inp.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')go()}});
   B.querySelectorAll('[data-fly]').forEach(b=>b.onclick=()=>{const M=LM2[b.dataset.fly];closePhone();glbOpen();if(M&&M.ll){GLB.lat=M.ll[0];GLB.lon=M.ll[1]-0.012;GLB.z=900;GLB.pick=[M.ll[0]-0.006,M.ll[1]];glbInfo();glbDraw()}});
   B.querySelectorAll('[data-refresh]').forEach(b=>b.onclick=()=>{offers=genOffers();renderPhone('jobs')});
   B.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{mission=null;updateTracker();renderPhone('jobs')});
@@ -5203,7 +5217,7 @@ function loop(){
   doorT-=dt; if(doorT<=0){doorT=0.15;updateDoorPrompt();drawMinimap();if(mission||navTarget)updateTracker();
     if(mission&&mission.deadline&&performance.now()>mission.deadline){toast('Trop tard : le boulot « '+mission.title+' » est annulé.','bad');mission=null;updateTracker()}
     if(navTarget&&Math.hypot(dolly.position.x-navTarget.x,dolly.position.z-navTarget.z)<2.5){navTarget=null;updateTracker()}}
-  {const P=dolly.position,mv=Math.hypot(P.x-lastPos.x,P.z-lastPos.z);lastPos.copy(P);updateAvatar(dt,mv)}
+  {const P=dolly.position,mv=Math.hypot(P.x-lastPos.x,P.z-lastPos.z);lastPos.copy(P);updateAvatar(dt,mv);try{mpTick(dt)}catch(e){MP.err=String(e&&e.stack||e).slice(0,300)}}
   tickNeeds(dt); updateBeacon(performance.now()/1000);
   saveT-=dt; if(saveT<=0){saveT=20;if(saveDirty){saveDirty=false;saveGame()}}
   tickTraffic(dt); crowdTick(dt); tickFauna(dt,performance.now()/1000);
@@ -5656,6 +5670,12 @@ function terMesh(){if(!TER.ok||!world)return;const P=dolly.position;
   if(!TER.mat)TER.mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0});
   if(TER.mesh){TER.mesh.parent&&TER.mesh.parent.remove(TER.mesh);TER.mesh.geometry.dispose()}
   TER.mesh=new THREE.Mesh(g,TER.mat);TER.mesh.receiveShadow=true;TER.mesh.userData.ownGeo=true;world.add(TER.mesh);TER.at=[P.x,P.z,TER.ver];
+  // lacs et fleuves (eau au-dessus du niveau de la mer) : nappe d'eau à l'altitude réelle, le fond est creusé de 3 m
+  {const lp=[],step=S/N0,W1=N0+1;for(let iz=0;iz<N0;iz++)for(let ix=0;ix<N0;ix++){const i=iz*W1+ix,q=[i,i+1,i+W1,i+W1+1];if(!q.every(k=>lcs[k]===9&&raw[k]>4))continue;
+      let y=1e9;for(const k of q)y=Math.min(y,pos.getY(k));for(const k of q)pos.setY(k,Math.min(pos.getY(k),y)-3);const x0=pos.getX(i),z0=pos.getZ(i),yy=y-0.25;lp.push(x0,yy,z0,x0,yy,z0+step,x0+step,yy,z0,x0+step,yy,z0,x0,yy,z0+step,x0+step,yy,z0+step)}
+    if(TER.lake){TER.lake.parent&&TER.lake.parent.remove(TER.lake);TER.lake.geometry.dispose();TER.lake=null}
+    if(lp.length){pos.needsUpdate=true;g.computeVertexNormals();const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(lp),3));if(!TER.lakeMat){const U=WATER.uniforms;TER.lakeMat=new THREE.ShaderMaterial({uniforms:{time:U.time,sunDir:U.sunDir,cTop:U.cTop,cHor:U.cHor,night:U.night,fogColor:U.fogColor,fogDensity:U.fogDensity,deep:{value:L('#1f4a5a')},shallow:{value:L('#3f7f86')},chop:{value:0.3}},vertexShader:WATER.vertexShader,fragmentShader:WATER.fragmentShader,side:THREE.DoubleSide})}
+      TER.lake=new THREE.Mesh(lg,TER.lakeMat);TER.lake.frustumCulled=false;TER.lake.userData.ownGeo=true;world.add(TER.lake)}}
   // mer réelle : un plan d'eau au niveau de la mer partout où le littoral réel passe (océans, baies, lagunes)
   if(nSea){if(!TER.seaMat){const U=WATER.uniforms;TER.seaMat=new THREE.ShaderMaterial({uniforms:{time:U.time,sunDir:U.sunDir,cTop:U.cTop,cHor:U.cHor,night:U.night,fogColor:U.fogColor,fogDensity:U.fogDensity,deep:{value:L('#0d4658')},shallow:{value:L('#2f8f98')},chop:{value:1}},vertexShader:WATER.vertexShader,fragmentShader:WATER.fragmentShader})}
     if(!TER.sea){const sg=new THREE.PlaneGeometry(1,1);sg.rotateX(-Math.PI/2);TER.sea=new THREE.Mesh(sg,TER.seaMat);TER.sea.frustumCulled=false}
@@ -5953,6 +5973,62 @@ function rebaseTo(lat,lon,fly){const nc=nearestCity(lat,lon);if(!nc)return false
       curIso=countryAt(lat,lon)||curIso}
       catch(e){console.warn('Recentrage impossible',e)}finally{$('#loading').hidden=true;rebasing=false}},60);return true}
   catch(e){console.warn('Recentrage impossible',e);rebasing=false;$('#loading').hidden=true;return false}}
+/* ---- En ligne : les autres joueurs près de vous, partout sur la Terre ----
+   Client MQTT minimal (WebSocket) vers un serveur public gratuit, sans compte ni clé. Chaque joueur publie sa position
+   (latitude/longitude réelles) dans une case de ~5 km ; on écoute sa case et les 8 voisines. Pseudo, apparence, salut et messages. */
+const escH=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MP=window.__MP={ws:null,ok:false,bi:0,subs:new Set(),peers:{},log:[],pubT:0,lookT:0,mid:1,ping:0,retry:0,lastSent:null,unread:0};
+const MP_BASE='monde-vivant/v1/',MP_BROKERS=()=>(window.MV_CONFIG||{}).mpBrokers||['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://test.mosquitto.org:8081'];
+const mpEnc=s=>new TextEncoder().encode(s),mpStr=s=>{const b=mpEnc(s);return [b.length>>8,b.length&255,...b]};
+const mpLen=n=>{const o=[];do{let d=n%128;n=Math.floor(n/128);if(n>0)d|=128;o.push(d)}while(n>0);return o};
+function mpSend(type,flags,body){if(!MP.ws||MP.ws.readyState!==1)return;MP.ws.send(new Uint8Array([type<<4|flags,...mpLen(body.length),...body]))}
+function mpOn(){return GAME&&GAME.created&&GAME.settings.online!==false&&(window.MV_CONFIG||{}).online!==false}
+function mpId(){return GAME.mpid||(GAME.mpid='j'+Math.random().toString(36).slice(2,10))}
+function mpConnect(){if(!mpOn()||MP.ws)return;const L=MP_BROKERS(),url=L[MP.bi%L.length];
+  try{MP.ws=new WebSocket(url,['mqtt'])}catch(e){MP.ws=null;MP.bi++;return}MP.ws.binaryType='arraybuffer';
+  MP.ws.onopen=()=>mpSend(1,0,[...mpStr('MQTT'),4,2,0,60,...mpStr(mpId()+'_'+Math.random().toString(36).slice(2,6))]);
+  MP.buf=new Uint8Array(0);MP.ws.onmessage=e=>{const inc=new Uint8Array(e.data),nb=new Uint8Array(MP.buf.length+inc.length);nb.set(MP.buf);nb.set(inc,MP.buf.length);let b=nb,p=0;
+    while(p<b.length){const t=b[p]>>4;let n=0,m=1,q=p+1,d,okL=true;do{if(q>=b.length){okL=false;break}d=b[q++];n+=(d&127)*m;m*=128}while(d&128);if(!okL||q+n>b.length)break;const body=b.subarray(q,q+n);p=q+n;
+      if(t===2){MP.ok=body[1]===0;MP.retry=0;MP.subs.clear();mpCells(true)}
+      else if(t===3){const tl=(body[0]<<8)|body[1],topic=new TextDecoder().decode(body.subarray(2,2+tl));let msg;try{msg=JSON.parse(new TextDecoder().decode(body.subarray(2+tl)))}catch(_){continue}mpRecv(topic,msg)}}MP.buf=b.slice(p)};
+  MP.ws.onclose=MP.ws.onerror=()=>{if(!MP.ws)return;try{MP.ws.close()}catch(_){}MP.ws=null;MP.ok=false;MP.bi++;MP.retry=performance.now()+6000}}
+function mpCell(lat,lon){return Math.floor(lat*20)+'_'+Math.floor(lon*20)}
+function mpCells(force){if(!MP.ok)return;const [la,lo]=playerLatLon(),i=Math.floor(la*20),j=Math.floor(lo*20),want=new Set();
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){want.add(MP_BASE+'p/'+(i+a)+'_'+(j+b));want.add(MP_BASE+'c/'+(i+a)+'_'+(j+b))}
+  for(const t of MP.subs)if(!want.has(t)){mpSend(10,2,[MP.mid>>8&255,MP.mid++&255,...mpStr(t)]);MP.subs.delete(t)}
+  for(const t of want)if(!MP.subs.has(t)){mpSend(8,2,[MP.mid>>8&255,MP.mid++&255,...mpStr(t),0]);MP.subs.add(t)}
+  mpSend(8,2,[MP.mid>>8&255,MP.mid++&255,...mpStr(MP_BASE+'u/'+mpId()),0])}
+function mpPub(kind,obj){if(!MP.ok)return;const [la,lo]=playerLatLon();mpSend(3,0,[...mpStr(MP_BASE+kind+'/'+mpCell(la,lo)),...mpEnc(JSON.stringify(obj))])}
+function mpTo(id,obj){if(MP.ok)mpSend(3,0,[...mpStr(MP_BASE+'u/'+id),...mpEnc(JSON.stringify(obj))])}
+function mpRecv(topic,m){if(!m||m.i===mpId()||typeof m.i!=='string')return;const now=performance.now();
+  if(topic.indexOf(MP_BASE+'p/')===0){if(!(Math.abs(m.a)<=90&&Math.abs(m.o)<=180))return;const P=MP.peers[m.i]||(MP.peers[m.i]={i:m.i,first:now});
+    Object.assign(P,{n:String(m.n||'Joueur').slice(0,24),a:+m.a,o:+m.o,y:+m.y||0,f:!!m.f,d:m.d||'',c:String(m.c||'').slice(0,3),last:now});if(m.k&&typeof m.k==='object'&&!P.look){const k=m.k,L={};for(const f in k){const v=k[f];if(typeof v==='number'&&isFinite(v)&&Math.abs(v)<1e6||typeof v==='boolean'||typeof v==='string'&&v.length<40)L[f]=v}P.look=L;mpDrop(P)}
+    if(!P.hello){P.hello=1;if(P.av===undefined)toast('<b>'+escH(P.n)+'</b> est en ligne près de vous.')}}
+  else if(topic.indexOf(MP_BASE+'c/')===0||topic===MP_BASE+'u/'+mpId()){const n=escH(String(m.n||'Joueur').slice(0,24));
+    if(m.w){toast('<b>'+n+'</b> vous salue.','good');needs({moral:2});return}
+    if(m.t){const t=String(m.t).slice(0,160);MP.log.push({n:String(m.n||'Joueur').slice(0,24),t,ts:Date.now()});MP.log=MP.log.slice(-40);MP.unread++;toast('<b>'+n+'</b> : '+escH(t));if(phoneView==='online'&&!$('#phone').hidden)renderPhone('online')}}}
+function mpLabel(P){const n=P.av,g=n.lc.getContext('2d'),w=n.lc.width,h=n.lc.height;g.clearRect(0,0,w,h);g.fillStyle='rgba(20,40,70,.78)';const r=20;g.beginPath();g.moveTo(r,4);g.arcTo(w-4,4,w-4,h-4,r);g.arcTo(w-4,h-4,4,h-4,r);g.arcTo(4,h-4,4,4,r);g.arcTo(4,4,w-4,4,r);g.fill();
+  g.textAlign='center';g.fillStyle='#fbefe2';g.font='bold 34px "Trebuchet MS",sans-serif';g.fillText(P.n,w/2,42);g.fillStyle='#8fd0ff';g.font='24px "Trebuchet MS",sans-serif';g.fillText('Joueur en ligne',w/2,76);n.lt.needsUpdate=true;n.label.visible=true}
+function mpAvatar(P){if(P.av)return;const n={id:'mp_'+P.i,name:P.n,female:P.f,job:'player',look:P.look||null,inside:null};const R0=R;R=mulberry32(wHash(P.i));try{buildHuman(n)}catch(e){n.look=null;buildHuman(n)}finally{R=R0}
+  if(n.g.parent)n.g.parent.remove(n.g);scene.add(n.g);n.phase=0;P.av=n;P.x=null;mpLabel(P)}
+function mpDrop(P){if(P.av){scene.remove(P.av.g);(P.av.geos||[]).forEach(g=>g.dispose());P.av=null}}
+window.__mpTick=(dt)=>mpTick(dt);
+function mpTick(dt){const now=performance.now();MP.ticks=(MP.ticks||0)+1;
+  if(!mpOn()){if(MP.ws){const w=MP.ws;MP.ws=null;MP.ok=false;try{w.close()}catch(_){}}for(const k in MP.peers){mpDrop(MP.peers[k]);delete MP.peers[k]}return}
+  if(!MP.ws&&now>MP.retry)mpConnect();if(!MP.ok)return;
+  if(now-MP.ping>30000){MP.ping=now;mpSend(12,0,[])}
+  const [la,lo]=playerLatLon(),moved=!MP.lastSent||Math.abs(MP.lastSent[0]-la)+Math.abs(MP.lastSent[1]-lo)>3e-6||Math.abs(MP.lastSent[2]-yaw)>0.05;
+  if(now-MP.pubT>(moved?600:5000)){MP.pubT=now;MP.lastSent=[la,lo,yaw];const full=now-MP.lookT>8000;if(full){MP.lookT=now;mpCells()}
+    mpPub('p',{i:mpId(),n:GAME.name||'Joueur',a:+la.toFixed(6),o:+lo.toFixed(6),y:+yaw.toFixed(2),f:!!GAME.female,d:drive?drive.t:(inside?'in':''),c:curIso||'',k:full?GAME.look:undefined})}
+  const Q=dolly.position;
+  for(const k in MP.peers){const P=MP.peers[k];if(now-P.last>16000){mpDrop(P);delete MP.peers[k];continue}
+    const [x,z]=geoToLocal(P.a,P.o),far=Math.hypot(x-Q.x,z-Q.z)>2500||P.d==='in';if(far){mpDrop(P);continue}
+    if(!P.av)mpAvatar(P);const n=P.av;if(P.x==null){P.x=x;P.z=z}const dx=x-P.x,dz=z-P.z,dist=Math.hypot(dx,dz);
+    if(dist>40){P.x=x;P.z=z}else{const f=Math.min(1,dt*6);P.x+=dx*f;P.z+=dz*f}
+    n.g.position.set(P.x,groundY(P.x,P.z,0.6),P.z);let da=(P.y+Math.PI)-n.g.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));n.g.rotation.y+=da*Math.min(1,dt*8);
+    pose(n,P.d==='car'||P.d==='moto'?'ride':dist>0.05?'walk':'idle',dt,Math.min(2,dist/dt/1.4||1),now);n.label.position.y=2.35}}
+function mpNear(){const Q=dolly.position;let best=null,bd=3;for(const k in MP.peers){const P=MP.peers[k];if(!P.av)continue;const d=Math.hypot(P.x-Q.x,P.z-Q.z);if(d<bd){bd=d;best=P}}return best?{P:best,d:bd}:null}
+function mpSay(t){t=String(t||'').trim().slice(0,160);if(!t||!MP.ok)return false;mpPub('c',{i:mpId(),n:GAME.name||'Joueur',t});MP.log.push({n:(GAME.name||'Vous')+' (vous)',t,ts:Date.now()});MP.log=MP.log.slice(-40);return true}
 /* ---- Passeport : tampons des pays visités et monuments découverts, récompensés en expérience ---- */
 const PASS=()=>GAME.pass||(GAME.pass={c:{},lm:{}});
 function passCountry(iso){if(!GAME||!GAME.created||!iso)return;const P=PASS();if(P.c[iso])return;P.c[iso]={t:Date.now(),city:REGION.noQuarter?'':REGION.city};const n=Object.keys(P.c).length;
@@ -5996,7 +6072,7 @@ function glbInfo(){const el=$('#g-pick'),go=$('#g-go');if(!GLB.pick){el.textCont
   $('#g-close').onclick=()=>{$('#globe').hidden=true};
   $('#g-go').onclick=()=>{if(!GLB.pick)return;const [la,lo]=GLB.pick;if(!WORLD){toast('Carte du monde indisponible.');return}const pr=flightPrice(GLB.km||0);if(pr&&!pay(pr,'Vol libre · '+(wCountry(countryAt(la,lo)||'')||'')))return;$('#globe').hidden=true;if(drive){drive.lost=true;exitVehicle()}if(GAME.stats)GAME.stats.travels=(GAME.stats.travels||0)+1;rebaseTo(la,lo,true)};
   $('#t-free').onclick=glbOpen;addEventListener('resize',()=>glbDraw())}
-window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,env:()=>({kind:ENV&&ENV.kind,sea:!!(TER.sea&&TER.sea.parent),wx:LIVEW,season:season(),w:weatherAt(REGION)}),pass:()=>GAME.pass,veg:()=>({n:VEG.n,lc:[...LC.tiles.keys()],kinds:VEG.group?VEG.group.children.map(m=>m.name+':'+m.count):[]}),lm:()=>Object.keys(LMVIS).map(k=>[k,LMVIS[k].inst?Object.keys(LMVIS[k].inst):null,LMVIS[k].models.map(d=>d.id+'@'+Math.round(d.x)+','+Math.round(d.z))]),noon:()=>{simTime+=((12-((simTime/3600000+tzOff)%24))+24)%24*3600000},geo:()=>{const ll=playerLatLon();return{ll,R:[REGION.lat,REGION.lon,REGION.id,!!REGION.noQuarter],nc:nearestCity(ll[0],ll[1]),rebasing,pos:[dolly.position.x,dolly.position.z],world:!!WORLD,iso:curIso,osm:OSMD?(OSMD.b||[]).length:null,key:osmKey(REGION)}},tp:(x,z,yw)=>{if(!inside)dolly.position.set(x,0,z);if(yw!=null){yaw=yw;pitch=0.05}}});
+window.__osm=()=>({doors:OSMDOORS,poi:OSMPOI,enter:osmEnter,floor:osmFloor,tiles:TILES,tick:tilesTick,crowd:CROWD,mp:()=>({ticks:MP.ticks,dbg:MP.dbg,me:GAME.mpid,t:Math.round(performance.now()/1000),err:MP.err,ok:MP.ok,ws:MP.ws?MP.ws.readyState:-1,bi:MP.bi,on:mpOn(),inside:!!inside,peers:Object.values(MP.peers).map(P=>[P.n,!!P.av,P.x|0,P.z|0,P.d,P.a,P.o]),log:MP.log,say:mpSay}),env:()=>({kind:ENV&&ENV.kind,sea:!!(TER.sea&&TER.sea.parent),wx:LIVEW,season:season(),w:weatherAt(REGION)}),pass:()=>GAME.pass,veg:()=>({n:VEG.n,lc:[...LC.tiles.keys()],kinds:VEG.group?VEG.group.children.map(m=>m.name+':'+m.count):[]}),lm:()=>Object.keys(LMVIS).map(k=>[k,LMVIS[k].inst?Object.keys(LMVIS[k].inst):null,LMVIS[k].models.map(d=>d.id+'@'+Math.round(d.x)+','+Math.round(d.z))]),noon:()=>{simTime+=((12-((simTime/3600000+tzOff)%24))+24)%24*3600000},geo:()=>{const ll=playerLatLon();return{ll,R:[REGION.lat,REGION.lon,REGION.id,!!REGION.noQuarter],nc:nearestCity(ll[0],ll[1]),rebasing,pos:[dolly.position.x,dolly.position.z],world:!!WORLD,iso:curIso,osm:OSMD?(OSMD.b||[]).length:null,key:osmKey(REGION)}},tp:(x,z,yw)=>{if(!inside)dolly.position.set(x,0,z);if(yw!=null){yaw=yw;pitch=0.05}}});
 
 async function boot(){
   try{
